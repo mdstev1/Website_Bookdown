@@ -1,25 +1,11 @@
 # Introduction {#intro}
 
-This section will introduce the project question and outline the remainder of the report.
+This section will introduce the project question and outline the remainder of the report.  
 
-The template features on this page will be kept until further information can be composed.
+A study performed by the NASA Jet Propulsion Laboratory (JPL) compiled data entries from over a million wells in the central valley. From this list, representative wells (with a sufficient amount of measurements) were chosen for 1-km grids across the valley. This dataset includes water table elevations at each well, measured across varying amounts and intervals of time. 
 
-You can label chapter and section titles using `{#label}` after them, e.g., we can reference Chapter \@ref(intro). If you do not manually label them, there will be automatic labels anyway, e.g., Chapter \@ref(methods).
+In this study, these measurements will be analyzed to determine if water levels are rising or falling. To account for seasonal variations, the measurements from each well will be analyzed across several years. 
 
-Figures and tables with captions will be placed in `figure` and `table` environments, respectively.
+Once a temporal trend has been identified for each well, wells will be analyzed together to identify spatial trends. Areas of high or consistent rising or falling groundwater levels will be identified and grouped together. These areas will then be compared to land usage data to determine if there is a correlation.
 
-```{r nice-fig, fig.cap='Here is a nice figure!', out.width='80%', fig.asp=.75, fig.align='center'}
-par(mar = c(4, 4, .1, .1))
-plot(pressure, type = 'b', pch = 19)
-```
-
-Reference a figure by its code chunk label with the `fig:` prefix, e.g., see Figure \@ref(fig:nice-fig). Similarly, you can reference tables generated from `knitr::kable()`, e.g., see Table \@ref(tab:nice-tab).
-
-```{r nice-tab, tidy=FALSE}
-knitr::kable(
-  head(iris, 20), caption = 'Here is a nice table!',
-  booktabs = TRUE
-)
-```
-
-You can write citations, too. For example, we are using the **bookdown** package [@R-bookdown] in this sample book, which was built on top of R Markdown and **knitr** [@xie2015].
+This land usage data will likely come from a publicly available dataset like those from USGS.
