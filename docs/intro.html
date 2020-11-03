@@ -24,7 +24,7 @@
 <meta name="author" content="Michael Stevens" />
 
 
-<meta name="date" content="2020-10-24" />
+<meta name="date" content="2020-11-02" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -32,7 +32,7 @@
   
   
 <link rel="prev" href="index.html"/>
-<link rel="next" href="literature.html"/>
+<link rel="next" href="literature-review.html"/>
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
@@ -136,7 +136,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="divider"></li>
 <li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Abstract</a></li>
 <li class="chapter" data-level="2" data-path="intro.html"><a href="intro.html"><i class="fa fa-check"></i><b>2</b> Introduction</a></li>
-<li class="chapter" data-level="3" data-path="literature.html"><a href="literature.html"><i class="fa fa-check"></i><b>3</b> Literature</a></li>
+<li class="chapter" data-level="3" data-path="literature-review.html"><a href="literature-review.html"><i class="fa fa-check"></i><b>3</b> Literature Review</a></li>
 <li class="chapter" data-level="4" data-path="methods.html"><a href="methods.html"><i class="fa fa-check"></i><b>4</b> Methods</a></li>
 <li class="chapter" data-level="5" data-path="applications.html"><a href="applications.html"><i class="fa fa-check"></i><b>5</b> Applications</a><ul>
 <li class="chapter" data-level="5.1" data-path="applications.html"><a href="applications.html#example-one"><i class="fa fa-check"></i><b>5.1</b> Example one</a></li>
@@ -146,7 +146,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="6" data-path="final-words.html"><a href="final-words.html"><i class="fa fa-check"></i><b>6</b> Final Words</a></li>
 <li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
 <li class="divider"></li>
-<li>Created for CE En 594R</li>
+<li><a>Created for CE En 594R</a></li>
 
 </ul>
 
@@ -167,11 +167,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
             <section class="normal" id="section-">
 <div id="intro" class="section level1">
 <h1><span class="header-section-number">Chapter 2</span> Introduction</h1>
-<p>This section will introduce the project question and outline the remainder of the report.</p>
-<p>A study performed by the NASA Jet Propulsion Laboratory (JPL) compiled data entries from over a million wells in the central valley. From this list, representative wells (with a sufficient amount of measurements) were chosen for 1-km grids across the valley. This dataset includes water table elevations at each well, measured across varying amounts and intervals of time.</p>
-<p>In this study, these measurements will be analyzed to determine if water levels are rising or falling. To account for seasonal variations, the measurements from each well will be analyzed across several years.</p>
-<p>Once a temporal trend has been identified for each well, wells will be analyzed together to identify spatial trends. Areas of high or consistent rising or falling groundwater levels will be identified and grouped together. These areas will then be compared to land usage data to determine if there is a correlation.</p>
-<p>This land usage data will likely come from a publicly available dataset like those from USGS.</p>
+<p>A study performed by the NASA Jet Propulsion Laboratory (JPL) compiled data entries from over a million wells in the central valley. From this list, representative wells (with a sufficient amount of measurements) were chosen for 1-km grids across the valley. This dataset includes measurements for the depth to groundwater at each well, measured across varying ranges and intervals of time.</p>
+<p>The data consists of 9 different variable. Five of these variables relate to the identification number of each well. Two variables relate to the spatial location (lat/long coordinates) of each well. The wells are distributed all across the Central Valley of California. The final two variables describe the date that each measurement was taken and the value of the measurement itself. The well data begins around 2001 and ends in 2019. Depth to groundwater varies from well to well, but is generally between 0 and 100 feet.</p>
+<p>It will be necessary to retrieve ground surface elevation (GSE) data for each well so that the Water Table Elevation (WTE) can be determined, which is the difference between the GSE and the depth to groundwater.</p>
+<p>In this study, these measurements will be trimmed down to a smaller area within the valley that will serve as a test case for our study. The area will be chosen based on the spatial and temporal robustness of its data.</p>
 
 </div>
             </section>
@@ -180,7 +179,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
         </div>
       </div>
 <a href="index.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="literature.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="literature-review.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>
