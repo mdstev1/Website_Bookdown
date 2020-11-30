@@ -30,7 +30,7 @@ CV_shape <- geojsonio::geojson_read("CA_Bulletin_118_Aquifer_Regions_dissolved.g
 # Create a leaflet map of the all wells in the dataset with the central valley outline
 leaflet() %>%
   addTiles() %>%
-  addPolygons(data = CV_shape, stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1) %>%
+  addPolygons(data = CV_shape, stroke = FALSE, smoothFactor = 0.3, fillOpacity = 0.5) %>%
   addMarkers(data = master_wells,
               lng = ~lon, 
               lat = ~lat, 
@@ -88,17 +88,18 @@ w15 <- w15 %>%
   rename(mergeOn = colnames(w15)) %>%
   merge(CV_wells, by = "mergeOn")
 
-# Create another leaflet map...
+# Create another leaflet map of the wells that span 15+ years
 leaflet() %>%
   addTiles() %>%
-  addPolygons(data = CV_shape, stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1) %>%
+  addPolygons(data = CV_shape, stroke = FALSE, smoothFactor = 0.3, fillOpacity = 0.5) %>%
   addMarkers(data = w15,
              lng = ~long, 
              lat = ~lat, 
              popup = ~mergeOn
-             )
+             ) 
 
-# We identified the 5 wells that we'd like to use
+# From the map, we identified 5 wells that are grouped together.
+  ## The wells in the north, near Chico did not have even coverage, despite our cleaning methods.
 test_wells <- c('19N01W32E003M', 
                 '19N02E13Q001M', 
                 '18N02W18D004M', 
@@ -112,8 +113,19 @@ for (well in test_wells){
 }
 
 
-# Create a histogram of observations by year for all 4 wells
+# Create a histogram of observations by year for all wells
 ts <- subset(master, mergeOn %in% test_wells)
 hist(ts$date, 'years', xlab = "Date", freq = TRUE, format = "%Y")
+
+# Final leaflet map with study area in red
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = CV_shape, stroke = FALSE, smoothFactor = 0.3, fillOpacity = 0.5) %>%
+  addMarkers(data = w15,
+             lng = ~long, 
+             lat = ~lat, 
+             popup = ~mergeOn
+  ) %>%
+  addRectangles(lng1 = -119.5, lat1 = 36.0, lng2 = -120.3, lat2 = 36.5, color = "#ff0000", opacity = 0.9, fillColor = "transparent")
 
 
