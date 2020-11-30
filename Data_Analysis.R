@@ -1,7 +1,3 @@
-library(dplyr)
-library(lubridate)
-library(data.table)
-
 # These are the wells that we identified
 test_wells <- c('19N01W32E003M', 
                 '19N02E13Q001M', 

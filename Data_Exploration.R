@@ -1,6 +1,8 @@
-#master <- read.csv("jpl_master_edited.csv")[,1:9]
-#master$depth.to.GW..ft. <- as.numeric(master$depth.to.GW..ft.)
-#master$date <- as.Date(master$date, format = "%m/%d/%y")
+# The file "jpl_master_edited.csv" was too large to commit to Github. 
+# The data frame "master" contains all data from the original csv:
+  #master <- read.csv("jpl_master_edited.csv")[,1:9]
+  #master$depth.to.GW..ft. <- as.numeric(master$depth.to.GW..ft.)
+  #master$date <- as.Date(master$date, format = "%m/%d/%y")
 library(leaflet)
 library(dplyr)
 library(ggplot2)
@@ -10,6 +12,7 @@ library(sf)
 library(spatialEco)
 library(tidyverse)
 library(data.table)
+library(lubridate)
 load("master.Rda")
 head(master)
 
