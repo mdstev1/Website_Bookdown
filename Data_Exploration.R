@@ -24,20 +24,10 @@ master_wells <- distinct(master, mergeOn, .keep_all = TRUE)[,1:7]
 # we must keep some columns as chr b/c some have letters
 master_wells$NDI <- as.character(master_wells$NDI)
 
-# Create a leaflet map of all wells
-master_wells %>%
-  leaflet() %>%
-  addTiles() %>%
-  addMarkers(lng = ~lon, 
-             lat = ~lat, 
-             popup = ~NDI, 
-             clusterOptions = markerClusterOptions())
-
 # Load in a geojson file that outlines the central valley
-# CV_shape <- FROM_GeoJson(url_file_string = "CA_Bulletin_118_Aquifer_Regions_dissolved.geojson")
 CV_shape <- geojsonio::geojson_read("CA_Bulletin_118_Aquifer_Regions_dissolved.geojson", what = "sp")
 
-# Create another leaflet map of wells that have at least 180
+# Create a leaflet map of the all wells in the dataset with the central valley outline
 leaflet() %>%
   addTiles() %>%
   addPolygons(data = CV_shape, stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1) %>%
@@ -50,20 +40,19 @@ leaflet() %>%
 # Create a master_wells.csv file
 write.csv(master_wells, file = "master_wells.csv")
 
-# Find datasets that have at least 180 observations (enough data points for monthly data across 15 years)
+# Find datasets that have at least 180 observations (enough data points for monthly data across 15 years - this is just a screening value)
 master_count <- as.data.frame(table(master$mergeOn))
-
-w180_merge <- master_count %>%
+w180 <- master_count %>%
   filter(Freq > 180) %>%
   merge(master_wells, by.x = "Var1", by.y = "mergeOn") %>%
   rename(mergeOn = Var1)
 
 # Find 180 wells that fall within CV boundaries
-pts <- st_as_sf(x = w180_merge, coords = c("lon", "lat"))
+  # We'll transform the w180 and CV_shape data objects to simple feature geometry objects
+pts <- st_as_sf(x = w180, coords = c("lon", "lat"))
 st_crs(pts) <- st_crs(CV_shape)
 CV_shape <- st_as_sf(x = CV_shape)
-
-
+  # Now we'll intersect the two data objects and create a data frame
 CV_wells <- CV_shape %>%
   st_intersection(pts) %>%
   extract(col = geometry, into = c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>%
@@ -71,10 +60,9 @@ CV_wells <- CV_shape %>%
   subset(select = -c(Basin_Name, Shape_Length, Shape_Area, geometry)) %>%
   subset(select = -c(geometry))
 
-
 # Next, we need to find the wells that have data that span across at least 15 years.
   ## In addition, we would like to find data with an adequate distribution:
-    ### We'll do this by finding data with at least 12 data points per year. 
+    ### We'll do this by looping through the data to find wells with at least 12 data points per year. 
 w15 <- data.frame(c())
 for (well in CV_wells$mergeOn) {
   ts <- filter(master, mergeOn == well)
@@ -82,11 +70,11 @@ for (well in CV_wells$mergeOn) {
   yr_dist <- as.data.frame(table(year(ts$date)))
   add <- TRUE
   if (diff > 5475){
-    for (yr in yr_dist$Freq) {
-      if (yr < 12){
+    for (yr_freq in yr_dist$Freq) {
+      if (yr_freq < 12){
         add = FALSE
       }
-      if(yr > nrow(ts)/nrow(yr_dist)*2){
+      if(yr_freq > nrow(ts)/nrow(yr_dist)*3){
         add = FALSE
       }
     }
