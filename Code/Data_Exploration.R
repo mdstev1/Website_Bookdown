@@ -9,12 +9,11 @@ library(ggplot2)
 library(jpeg)
 library(geojsonio)
 library(sf)
-library(spatialEco)
 library(tidyverse)
 library(data.table)
 library(lubridate)
 library(graphics)
-load("master.Rda")
+load("code/master.Rda")
 head(master)
 
 # Create a histogram of the entire dataset
@@ -26,7 +25,7 @@ master_wells <- distinct(master, mergeOn, .keep_all = TRUE)[,1:7]
 master_wells$NDI <- as.character(master_wells$NDI)
 
 # Load in a geojson file that outlines the central valley
-CV_shape <- geojsonio::geojson_read("CA_Bulletin_118_Aquifer_Regions_dissolved.geojson", what = "sp")
+CV_shape <- geojsonio::geojson_read("code/CA_Bulletin_118_Aquifer_Regions_dissolved.geojson", what = "sp")
 
 # Create a leaflet map of the all wells in the dataset with the central valley outline
 leaflet() %>%
