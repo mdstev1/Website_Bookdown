@@ -9,17 +9,6 @@ biblio-style: apalike
 link-citations: yes
 description: "This website will act as a portfolio for my term project. The methodology, analysis, results, and conclusions will be discussed here."
 ---
---- 
-title: "An Analysis of Groundwater Levels in the Central Valley of California"
-author: "Michael Stevens"
-date: "`r Sys.Date()`"
-site: bookdown::bookdown_site
-documentclass: book
-bibliography: [book.bib, packages.bib]
-biblio-style: apalike
-link-citations: yes
-description: "This website will act as a portfolio for my term project. The methodology, analysis, results, and conclusions will be discussed here."
----
 
 # Abstract
 
@@ -60,12 +49,170 @@ A recent study performed by the Jet Propulsion Laboratory at the California Inst
 
 <!--chapter:end:03-literature.Rmd-->
 
-
 # Data Description
 
-Placeholder
+This section will describe the data used in this project.
+
+As described in the last section, the data used in this project comes from a recent study performed by NASA's JPL. The study compiled all freely available groundwater data in the Central Valley of CA from different sources and synthesized it. Data were collected from 5 different sources across two different agencies: the USGS and the California Department of Water Resources (DWR). As noted, duplicates and wells without sufficient data were filtered out and a "representative" well was chosen for each square kilometer that had at least one well available.
+
+First, we can load the dataset and inspect. It contains 9 different variables, including 5 that relate to various identification numbers. There are lat/long variables describing the geographic reference, a depth to GW, and a date at which the depth measurement was taken, as seen in Table \@ref(tab:master_tab).
+```{r master_tab, tidy=FALSE}
+load("code/master.Rda")
+head(master)
+```
+
+A histogram can show us the time distribution of measurements for the entire dataset, as shown in Figure \@ref(fig:mast_hist_fig)
+```{r mast_hist_fig }
+# Create a histogram of the entire dataset
+hist(master$date, 'years', xlab = "Date", freq = TRUE, format = "%Y")
+```
+
+In understanding the spatial locations of these wells, we will need to display each well. However, in order to do this, we need to first extract the wells from the master dataset so that we are not mapping them twice. Once we have that, we can create a map using Leaflet that shows all of the wells in the dataset.A polygon outlining the central valley has also been included in blue.
+
+```{r message=FALSE}
+library(dplyr)
+library(leaflet)
+# Create a master list of all wells
+master_wells <- distinct(master, mergeOn, .keep_all = TRUE)[,1:7]
+# we must keep some columns as chr b/c some have letters
+master_wells$NDI <- as.character(master_wells$NDI)
+
+# Load in a geojson file that outlines the central valley
+CV_shape <- geojsonio::geojson_read("code/CA_Bulletin_118_Aquifer_Regions_dissolved.geojson", what = "sp")
+```
+
+```{r}
+# Create a leaflet map of the all wells in the dataset with the central valley outline
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = CV_shape, stroke = FALSE, smoothFactor = 0.3, fillOpacity = 0.5) %>%
+  addMarkers(data = master_wells,
+              lng = ~lon, 
+              lat = ~lat, 
+              popup = ~NDI, 
+              clusterOptions = markerClusterOptions())
+```
+
+In order to clean this data to make it more manageable, we are going to filter out all wells that do not have more than 180 observations and do not fall within the central valley boundary polygon.
+```{r message=FALSE}
+library(sf)
+library(tidyverse)
+
+# Find datasets that have at least 180 observations (enough data points for monthly data across 15 years - this is just a screening value)
+master_count <- as.data.frame(table(master$mergeOn))
+w180 <- master_count %>%
+  filter(Freq > 180) %>%
+  merge(master_wells, by.x = "Var1", by.y = "mergeOn") %>%
+  rename(mergeOn = Var1)
+
+# Find 180 wells that fall within CV boundaries
+  # We'll transform the w180 and CV_shape data objects to simple feature geometry objects
+pts <- st_as_sf(x = w180, coords = c("lon", "lat"))
+st_crs(pts) <- st_crs(CV_shape)
+CV_shape <- st_as_sf(x = CV_shape)
+  # Now we'll intersect the two data objects and create a data frame
+CV_wells <- CV_shape %>%
+  st_intersection(pts) %>%
+  extract(col = geometry, into = c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>%
+  as.data.frame() %>%
+  subset(select = -c(Basin_Name, Shape_Length, Shape_Area, geometry)) %>%
+  subset(select = -c(geometry))
+```
+
+After an initial cleaning, the dataset can be further refined to find data that meet our criteria. For this analysis, we'd like as consistent of a database as possible, so we'll filter out data that doesn't span at least 15 years.
+
+```{r message=FALSE}
+library(lubridate)
+
+# Next, we need to find the wells that have data that span across at least 15 years.
+  ## In addition, we would like to find data with an adequate distribution:
+    ### We'll do this by looping through the data to find wells with at least 4 data points per year. 
+w15 <- list()
+for (well in CV_wells$mergeOn) {
+  ts <- filter(master, mergeOn == well)
+  diff <- as.integer(max(ts$date) - min(ts$date))
+  yr_dist <- as.data.frame(table(year(ts$date)))
+  add <- TRUE
+  if (diff > 5475){
+    for (yr_freq in yr_dist$Freq) {
+      if (yr_freq < 4){
+        add = FALSE
+      }
+    }
+    if (add == TRUE) {
+      w15 <- append(w15, well)
+      }
+  }
+}
+```
+
+Finally, the data can be summarized into 3 month blocks. Then, wells with coverage over the entire timeframe (19 years in this case) will be kept for further analysis. Once those wells are identified, a proper spatial distribution will need to be determined.
+
+```{r message=FALSE}
+# Next, we'll find wells that have at least one measurement every 3 months for 19 years
+w76 <- data.frame(c())
+for (well in w15){
+  ts <- filter(master, mergeOn == well)
+  mon_ts <- ts %>%
+    mutate(dategroup = lubridate::floor_date(date, "3 months")) %>%
+    group_by(dategroup) %>%
+    summarize(Mean_depth=mean(depth.to.GW..ft.))
+  if (nrow(mon_ts) >= 76){
+    w76 <- rbind(w76, well)
+  }
+}
+
+# This creates a dataframe with wells with data spanning 15 years
+w76 <- w76 %>%
+  rename(mergeOn = colnames(w76)) %>%
+  merge(CV_wells, by = "mergeOn")
+```
+```{r}
+# Create another leaflet map of the wells that span 15+ years
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = CV_shape, stroke = FALSE, smoothFactor = 0.3, fillOpacity = 0.5) %>%
+  addMarkers(data = w76,
+             lng = ~long, 
+             lat = ~lat, 
+             popup = ~mergeOn
+             ) 
+```
+
+For this analysis, we need a small cluster of wells that are within a reasonable (~50 km) from each other. A certain distance could be set as a threshold, and R could be used to determine a proper cluster programmatically. However, in this case, it is easier to manually determine a good cluster of wells. Based on the map, wells 25N03W11B003M, 29N03W18M001M, 24N02W29N004M, 24N02W24D003M, and 24N02W03B001M were chosen (the area will be displayed a little later on). A facet-wrapped histogram shows the distribtion of these wells' measurements.
+```{r}
+# From the map, we identified 5 wells that are grouped together.
+test_wells <- c('25N03W11B003M', 
+                '29N03W18M001M', 
+                '24N02W29N004M', 
+                '24N02W24D003M',
+                '24N02W03B001M')
+
+# Now we can create a time series list, histogram mosaic, and well list.
+test_ts <- subset(master, mergeOn %in% test_wells)
+ggplot(test_ts, aes(x=date)) +
+  geom_histogram(bins = 19*4) +
+  facet_wrap(~mergeOn)
+```
+
+These wells will make up the basis for the remainder of this study. This final map includes a red box identifying the 5 wells that were chosen.
+
+```{r leaflet3}
+# Final leaflet map with study area in red
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = CV_shape, stroke = FALSE, smoothFactor = 0.3, fillOpacity = 0.5) %>%
+  addMarkers(data = w76,
+             lng = ~long, 
+             lat = ~lat, 
+             popup = ~mergeOn
+  ) %>%
+  addRectangles(lng1 = -121.4, lat1 = 38.75, lng2 = -122, lat2 = 39.1, color = "#ff0000", opacity = 0.9, fillColor = "transparent")
+```
 
 
+
+You can write citations, too. For example, we are using the **bookdown** package [@R-bookdown] in this sample book, which was built on top of R Markdown and **knitr** [@xie2015].
 
 <!--chapter:end:04-Data_desc.Rmd-->
 
@@ -120,15 +267,47 @@ test_ts_yr %>%
 
 Inverse Distance Weighting (IDW) is a spatial interpolation method that uses nearby observations to interpolate an unknown value at a location. IDW places more weight on observed values that are closer to the point in question. It is a fairly simple method of interpolation, and can be implemented in R fairly easily, as will be shown. 
 
-First, a year column will be added to the time series data frame created in the last section.
+First, a year column will be added to the time series data frame created in the last section. As stated above, we will interpolate over 2012-2015.
 
 ```{r, message=FALSE}
 library(gstat)
 library(sp)
 
+#Create a year column from the date in the test_ts_yr data frame.
 test_ts_yr[,"year"] <- format(test_ts_yr[,"date"], "%Y")
+#Initialize the years for interpolation and a dataframe to store the values
+yrs <- c(2012:2015)
+interp_values <- as.data.frame(c())
 ```
 
+Next, we will loop through each well and each year and perform the IDW interpolation. We will use the idw function to do this.
+```{r}
+for (well in test_wells$mergeOn){
+  for (yr in yrs){
+    lat <- filter(test_wells, mergeOn != well)$lat
+    long <- filter(test_wells, mergeOn != well)$lon
+    depth <- test_ts_yr %>%
+      filter(mergeOn != well) %>%
+      filter(year == yr) %>%
+      select(Mean_depth) %>%
+      as.list()
+    sample <- data.frame(lat, long, depth)
+    coordinates(sample) = ~long+lat
+    proj4string(sample) <- CRS("+proj=longlat +datum=WGS84")
+    loc <- data.frame(
+      long = filter(test_wells, mergeOn == well)$lon, 
+      lat = filter(test_wells, mergeOn == well)$lat)
+    coordinates(loc)  <- ~ long + lat
+    proj4string(loc) <- CRS("+proj=longlat +datum=WGS84")
+    new <- idw(formula=Mean_depth ~ 1, locations = sample, newdata = loc, idp = 2.0)
+    interp_values <- rbind(interp_values, c(well, yr, new@data$var1.pred)
+  }
+}
+colnames(interp_values) <- c("mergeOn", "year", "value")
+```
+
+
+As you can see, I have not finished this project. However, you can probably guess the ending: I compare the errors from both methods and make conclusions about how effective IDW is. Any feedback you have is appreciated.
 
 ## Example three
 
