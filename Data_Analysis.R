@@ -7,6 +7,23 @@ test_wells <- c('19N01W32E003M',
 
 test_wells <- subset(master_wells, mergeOn %in% test_wells)
 
+for (well in test_wells$mergeOn){
+  ts <- filter(master, mergeOn == well)
+  mon_ts <- ts %>%
+    mutate(dategroup = lubridate::floor_date(date, "3 months")) %>%
+    group_by(dategroup) %>%
+    summarize(Mean_depth=mean(depth.to.GW..ft.))
+  assign(paste(well, "_3mon_ts", sep = ""), mon_ts)
+  mon_ts %>%
+    ggplot(aes(x = dategroup, y = Mean_depth)) + 
+    geom_line() +
+    xlab("Date") +
+    ylab("Depth (ft)") +
+    ggtitle(well) +
+    theme(plot.title = element_text(hjust = 0.5))
+}
+
+
 # We'll start with the first one
 ts <- filter(master, mergeOn == '19N01E35B001M')
 # We can look at a histogram first
@@ -17,6 +34,8 @@ mon_ts <- ts %>%
   mutate(dategroup = lubridate::floor_date(date, "3 months")) %>%
   group_by(dategroup) %>%
   summarize(Mean_depth=mean(depth.to.GW..ft.))
+
+paste(well, "_ts", sep = "")
 
 
 # Now let's create a time series graph of these means

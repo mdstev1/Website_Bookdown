@@ -13,6 +13,7 @@ library(spatialEco)
 library(tidyverse)
 library(data.table)
 library(lubridate)
+library(graphics)
 load("master.Rda")
 head(master)
 
@@ -63,7 +64,7 @@ CV_wells <- CV_shape %>%
 # Next, we need to find the wells that have data that span across at least 15 years.
   ## In addition, we would like to find data with an adequate distribution:
     ### We'll do this by looping through the data to find wells with at least 12 data points per year. 
-w15 <- data.frame(c())
+w15 <- list()
 for (well in CV_wells$mergeOn) {
   ts <- filter(master, mergeOn == well)
   diff <- as.integer(max(ts$date) - min(ts$date))
@@ -71,61 +72,67 @@ for (well in CV_wells$mergeOn) {
   add <- TRUE
   if (diff > 5475){
     for (yr_freq in yr_dist$Freq) {
-      if (yr_freq < 12){
-        add = FALSE
-      }
-      if(yr_freq > nrow(ts)/nrow(yr_dist)*3){
+      if (yr_freq < 4){
         add = FALSE
       }
     }
     if (add == TRUE) {
-      w15 <- rbind(w15, well)}
+      w15 <- append(w15, well)
+      }
   }
 }
 
-# This creates a dataframe with data spanning 15 years
-w15 <- w15 %>%
-  rename(mergeOn = colnames(w15)) %>%
+# Next, we'll find wells that have at least one measurement every 3 months for 19 years
+w76 <- data.frame(c())
+for (well in w15){
+  ts <- filter(master, mergeOn == well)
+  mon_ts <- ts %>%
+    mutate(dategroup = lubridate::floor_date(date, "3 months")) %>%
+    group_by(dategroup) %>%
+    summarize(Mean_depth=mean(depth.to.GW..ft.))
+  if (nrow(mon_ts) >= 76){
+    w76 <- rbind(w76, well)
+  }
+}
+
+# This creates a dataframe with wells with data spanning 15 years
+w76 <- w76 %>%
+  rename(mergeOn = colnames(w76)) %>%
   merge(CV_wells, by = "mergeOn")
+
 
 # Create another leaflet map of the wells that span 15+ years
 leaflet() %>%
   addTiles() %>%
   addPolygons(data = CV_shape, stroke = FALSE, smoothFactor = 0.3, fillOpacity = 0.5) %>%
-  addMarkers(data = w15,
+  addMarkers(data = w76,
              lng = ~long, 
              lat = ~lat, 
              popup = ~mergeOn
              ) 
 
 # From the map, we identified 5 wells that are grouped together.
-  ## The wells in the north, near Chico did not have even coverage, despite our cleaning methods.
-test_wells <- c('19N01W32E003M', 
-                '19N02E13Q001M', 
-                '18N02W18D004M', 
-                '18N01W02E002M',
-                '19N01E35B001M')
+test_wells <- c('25N03W11B003M', 
+                '29N03W18M001M', 
+                '24N02W29N004M', 
+                '24N02W24D003M',
+                '24N02W03B001M')
+test_ts <- subset(master, mergeOn %in% test_wells)
+ggplot(test_ts, aes(x=date)) +
+  geom_histogram(bins = 19*4) +
+  facet_wrap(~mergeOn)
 
-# Create a histogram of observations by year for each well
-for (well in test_wells){
-  ts <- filter(master, mergeOn == well)
-  hist(ts$date, 'years', xlab = "Date", freq = TRUE, format = "%Y", main = well)
-}
-
-
-# Create a histogram of observations by year for all wells
-ts <- subset(master, mergeOn %in% test_wells)
-hist(ts$date, 'years', xlab = "Date", freq = TRUE, format = "%Y")
+test_wells <- subset(master_wells, mergeOn %in% test_wells)
 
 # Final leaflet map with study area in red
 leaflet() %>%
   addTiles() %>%
   addPolygons(data = CV_shape, stroke = FALSE, smoothFactor = 0.3, fillOpacity = 0.5) %>%
-  addMarkers(data = w15,
+  addMarkers(data = w76,
              lng = ~long, 
              lat = ~lat, 
              popup = ~mergeOn
   ) %>%
-  addRectangles(lng1 = -119.5, lat1 = 36.0, lng2 = -120.3, lat2 = 36.5, color = "#ff0000", opacity = 0.9, fillColor = "transparent")
+  addRectangles(lng1 = -121.4, lat1 = 38.6, lng2 = -122, lat2 = 39.1, color = "#ff0000", opacity = 0.9, fillColor = "transparent")
 
 

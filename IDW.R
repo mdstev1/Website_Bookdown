@@ -1,12 +1,9 @@
-kriging
-
-
 #IDW
 library(gstat)
 library(sp)
 
-lat <-  c(36.09, 36.20, 36.27, 36.36)
-long <- c(-120.12, -119.91, -120.18, -119.59)
+lat <-  test_wells$lat
+long <- test_wells$lon
 depth <- c(8.222411, 8.19931, 8.140428, 8.100752)
 
 sample <- data.frame(lat, long, depth)
