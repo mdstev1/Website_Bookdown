@@ -117,6 +117,8 @@ test_wells <- c('25N03W11B003M',
                 '24N02W29N004M', 
                 '24N02W24D003M',
                 '24N02W03B001M')
+
+# Now we can create a time series list, histogram mosaic, and well list.
 test_ts <- subset(master, mergeOn %in% test_wells)
 ggplot(test_ts, aes(x=date)) +
   geom_histogram(bins = 19*4) +

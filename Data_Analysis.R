@@ -1,52 +1,23 @@
-# These are the wells that we identified
-test_wells <- c('19N01W32E003M', 
-                '19N02E13Q001M', 
-                '18N02W18D004M', 
-                '18N01W02E002M',
-                '19N01E35B001M')
-
-test_wells <- subset(master_wells, mergeOn %in% test_wells)
-
+test_ts_yr <- data.frame(c())
 for (well in test_wells$mergeOn){
   ts <- filter(master, mergeOn == well)
-  mon_ts <- ts %>%
-    mutate(dategroup = lubridate::floor_date(date, "3 months")) %>%
-    group_by(dategroup) %>%
-    summarize(Mean_depth=mean(depth.to.GW..ft.))
-  assign(paste(well, "_3mon_ts", sep = ""), mon_ts)
-  mon_ts %>%
-    ggplot(aes(x = dategroup, y = Mean_depth)) + 
-    geom_line() +
-    xlab("Date") +
-    ylab("Depth (ft)") +
-    ggtitle(well) +
-    theme(plot.title = element_text(hjust = 0.5))
+  yr_ts <- ts %>%
+    mutate(date = lubridate::floor_date(date, "1 year"), mergeOn = mergeOn) %>%
+    group_by(date, mergeOn) %>%
+    summarize(Mean_depth=-1*mean(depth.to.GW..ft.))
+  test_ts_yr <- rbind(test_ts_yr, yr_ts)
+  #assign(paste(well, "_3mon_ts", sep = ""), mon_ts)
 }
 
-
-# We'll start with the first one
-ts <- filter(master, mergeOn == '19N01E35B001M')
-# We can look at a histogram first
-hist(ts$date, 'months', xlab = "Date", freq = TRUE, format = "%m-%y")
-
-# Next let's summarize the data into tri-monthly means
-mon_ts <- ts %>%
-  mutate(dategroup = lubridate::floor_date(date, "3 months")) %>%
-  group_by(dategroup) %>%
-  summarize(Mean_depth=mean(depth.to.GW..ft.))
-
-paste(well, "_ts", sep = "")
-
-
-# Now let's create a time series graph of these means
-
-mon_ts %>%
-  ggplot(aes(x = dategroup, y = Mean_depth)) + 
+# Now let's create time series graphs of these yearly means
+test_ts_yr %>%
+  ggplot(aes(x = date, y = Mean_depth)) + 
   geom_line() +
   xlab("Date") +
   ylab("Depth (ft)") +
   ggtitle(well) +
-  theme(plot.title = element_text(hjust = 0.5))
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~mergeOn)
 
 
 
