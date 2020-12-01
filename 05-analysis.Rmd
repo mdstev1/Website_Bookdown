@@ -45,6 +45,50 @@ test_ts_yr %>%
   facet_wrap(~mergeOn)
 ```
 
-## Example two
+## Inverse Distance Weighting
+
+Inverse Distance Weighting (IDW) is a spatial interpolation method that uses nearby observations to interpolate an unknown value at a location. IDW places more weight on observed values that are closer to the point in question. It is a fairly simple method of interpolation, and can be implemented in R fairly easily, as will be shown. 
+
+First, a year column will be added to the time series data frame created in the last section. As stated above, we will interpolate over 2012-2015.
+
+```{r, message=FALSE}
+library(gstat)
+library(sp)
+
+#Create a year column from the date in the test_ts_yr data frame.
+test_ts_yr[,"year"] <- format(test_ts_yr[,"date"], "%Y")
+#Initialize the years for interpolation and a dataframe to store the values
+yrs <- c(2012:2015)
+interp_values <- as.data.frame(c())
+```
+
+Next, we will loop through each well and each year and perform the IDW interpolation. We will use the idw function to do this.
+```{r}
+for (well in test_wells$mergeOn){
+  for (yr in yrs){
+    lat <- filter(test_wells, mergeOn != well)$lat
+    long <- filter(test_wells, mergeOn != well)$lon
+    depth <- test_ts_yr %>%
+      filter(mergeOn != well) %>%
+      filter(year == yr) %>%
+      select(Mean_depth) %>%
+      as.list()
+    sample <- data.frame(lat, long, depth)
+    coordinates(sample) = ~long+lat
+    proj4string(sample) <- CRS("+proj=longlat +datum=WGS84")
+    loc <- data.frame(
+      long = filter(test_wells, mergeOn == well)$lon, 
+      lat = filter(test_wells, mergeOn == well)$lat)
+    coordinates(loc)  <- ~ long + lat
+    proj4string(loc) <- CRS("+proj=longlat +datum=WGS84")
+    new <- idw(formula=Mean_depth ~ 1, locations = sample, newdata = loc, idp = 2.0)
+    interp_values <- rbind(interp_values, c(well, yr, new@data$var1.pred)
+  }
+}
+colnames(interp_values) <- c("mergeOn", "year", "value")
+```
+
+
+As you can see, I have not finished this project. However, you can probably guess the ending: I compare the errors from both methods and make conclusions about how effective IDW is. Any feedback you have is appreciated.
 
 ## Example three

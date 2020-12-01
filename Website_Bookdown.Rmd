@@ -116,7 +116,19 @@ test_ts_yr %>%
   facet_wrap(~mergeOn)
 ```
 
-## Example two
+## Inverse Distance Weighting
+
+Inverse Distance Weighting (IDW) is a spatial interpolation method that uses nearby observations to interpolate an unknown value at a location. IDW places more weight on observed values that are closer to the point in question. It is a fairly simple method of interpolation, and can be implemented in R fairly easily, as will be shown. 
+
+First, a year column will be added to the time series data frame created in the last section.
+
+```{r, message=FALSE}
+library(gstat)
+library(sp)
+
+test_ts_yr[,"year"] <- format(test_ts_yr[,"date"], "%Y")
+```
+
 
 ## Example three
 
