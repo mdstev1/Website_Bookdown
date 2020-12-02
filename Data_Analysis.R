@@ -67,7 +67,7 @@ W1 <- matrix(rnorm(1*500), 1, 500)
 
 # generate bias vector, b
 #b=np.random.normal(size=[h])
-b <- matrix(rnorm(500))
+b <- rnorm(500)
 
 # generate the A matrix (Eq 6)
 #a=np.dot(X,W1)+b 
@@ -82,7 +82,8 @@ ncd_ts <- X %>%
   summarize(PDSI=mean(PDSI)) %>%
   subset(ncd_ts, date %in% test_ts_3mon$date)
 
-a <- (ncd_ts$PDSI %*% W1) + t(b)
+a <- (ncd_ts$PDSI %*% W1)
+ab <- a + rep(b, each = nrow(a))
 #theta=np.maximum(a,0,a) # basis function
 
 
