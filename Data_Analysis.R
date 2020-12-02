@@ -5,7 +5,7 @@ for (well in test_wells$mergeOn){
     mutate(date = lubridate::floor_date(date, "1 year"), mergeOn = mergeOn) %>%
     group_by(date, mergeOn) %>%
     summarize(Mean_depth=-1*mean(depth.to.GW..ft.))
-  test_ts_yr <- rbind(test_ts_yr, yr_ts)
+  test_ts_yr <- as.data.frame(rbind(test_ts_yr, yr_ts))
   #assign(paste(well, "_3mon_ts", sep = ""), mon_ts)
 }
 
@@ -19,6 +19,29 @@ test_ts_yr %>%
   theme(plot.title = element_text(hjust = 0.5)) +
   facet_wrap(~mergeOn)
 
+
+
+
+library(ncdf4)
+climate_output <- nc_open("pdsi.mon.mean.nc")
+climate_output_sc <- nc_open("pdsi.mon.mean.selfcalibrated.nc")
+print(climate_output_sc)
+
+lat <- ncvar_get(climate_output_sc,"lat")
+lon
+time <- ncvar_get(climate_output_sc,"time")
+tail(time)
+tunits <- ncatt_get(climate_output_sc,"time","units")
+tunits
+pdsi_array <- ncvar_get(climate_output_sc,"pdsi")
+dim(pdsi_array)
+pdsi_array[,,1980]
+
+st_date <- as.Date("1800-01-01")
+date <- as.Date("2012-01-01")
+date_diff <- as.numeric((date-st_date)*24)
+which(time == date_diff)
+as.Date(date_diff/24, origin = "1800-01-01")
 
 
 # ELM CODE

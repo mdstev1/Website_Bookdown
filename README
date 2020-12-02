@@ -1,0 +1,145 @@
+    Palmer Drought Severity Index (PDSI) from NCAR
+    
+    Note: there is an a newer file available: the self-calibrated PDSI from
+    1850 to 2014. The dataset has been updated and past values reanalyzed.
+    
+    Brief Description:
+    
+    * Monthly gridded global PDSI (Palmer Drought Severity Index) values
+    from 1850-2010 from NCAR. More Details....
+    
+    Temporal Coverage:
+    
+    * 1870/01 to 2005/12
+    * 1850/01 to 2014/12 (self-calibrated)
+    
+    Spatial Coverage:
+    
+    * 2.5 degrees latitude by 2.5 degrees longitude global grid (144x55)
+    * 58.75S,76.25N ; -178.75W,178.75E
+    
+    [pdsi.png]
+    
+    Levels:
+    
+    * N/A
+    
+    Update Schedule:
+    
+    * Irregular, when source updates
+    
+    Download/Plot Data:
+    
+    Variable Statistic Level Download File Create Plot/Subset
+    PDSI Monthly Mean: self-calibrated Surface
+    pdsi.mon.mean.selfcalibrated.nc plot
+    PDSI Monthly Mean: Surface pdsi.mon.mean.nc plot
+    
+    Usage Restrictions:
+    
+    * Please contact the dataset's author to let him know of your
+    intended use adai@ucar.edu
+    
+    Detailed Description:
+    
+    * PDSI from the Dai dataset. The Palmer Drought Severity Index (PDSI)
+    is devised by Palmer (1965) to represent the severity of dry and
+    wet spells over the U.S. based on monthly temperature and
+    precipitation data as well as the soil-water holding capacity at
+    that location. These data consist of the monthly PDSI over global
+    land areas from 1850 to 2010. Different precipitation/temperature
+    datasets are used in the different files. Update and more
+    information are available at CGD (Climate and Global Dynamics
+    Division).
+    Please let the author, Dai at adai@ucar.edu, know what you are
+    using the dataset for.
+    
+    Caveats:
+    
+    * None
+    
+    Related File Naming & Structure Information:
+    
+    File Names:
+    * pdsi.mon.mean.nc   (In directory: /Datasets/dai_pdsi/)
+    * pdsi.mon.mean.selfcalibrated.nc   (In directory:
+    /Datasets/dai_pdsi/)
+    
+    OpenDap File Names:
+    * http://psl.noaa.gov/thredds/dodsC/Datasets/dai_pdsi/pdsi.m
+    on.mean.selfcalibrated.nc
+    * http://psl.noaa.gov/thredds/dodsC/Datasets/dai_pdsi/pdsi.m
+    on.mean.nc
+    
+    Dataset Format and Size:
+    * PSL standard NetCDF3 61 Mbyte self-calibrated file
+    * PSL standard NetCDF3 51 Mbyte non self-calibrated file
+    
+    Missing Data:
+    * Missing data is flagged with a value of -99999.
+    
+    Citation:
+    
+    * Dai, A., K. E. Trenberth, and T. Qian, 2004: A global data set of
+    Palmer Drought Severity Index for 1870-2002: Relationship with soil
+    moisture and effects of surface warming. J. Hydrometeorology, 5,
+    1117-1130.
+    * Please note: If you acquire Dai Palmer Drought Severity Index data
+    products from PSL, we ask that you acknowledge us in your use of
+    the data. This may be done by including text such as Dai Palmer
+    Drought Severity Index data provided by the NOAA/OAR/ESRL PSL,
+    Boulder, Colorado, USA, from their Web site at
+    http://psl.noaa.gov/ in any documents or publications
+    using these data. We would also appreciate receiving a copy of the
+    relevant publications. This will help PSL to justify keeping the
+    Dai Palmer Drought Severity Index data set freely available online
+    in the future. Thank you!
+    
+    References:
+    
+    * Dai, A., 2011a: Characteristics and trends in various forms of the
+    Palmer Drought Severity Index (PDSI) during 1900-2008. J. Geophys.
+    Res., 116, D12115, doi:10.1029/2010JD015541.
+    * Dai, A., 2011b: Drought under global warming: A review. Wiley
+    Interdisciplinary Reviews: Climate Change, 2, 45-65. DOI:
+    10.1002/wcc.81.
+    * Chen, M., P. Xie, J.E. Janowiak, and P.A. Arkin, 2002: Global land
+    precipitation: a 50-yr monthly analysis based on gauge
+    observations. J. Hydrometeorol., 3, 249-266.
+    * Dai, A., I. Fung, and A. D. Del Genio, 1997: Surface observed
+    global land precipitation variations during 1900-1988. J. Climate,
+    10, 2943-2962.
+    * Dai, A., K. E. Trenberth, and T. Karl, 1998: Global variations in
+    droughts and wet spells: 1900-1995. Geophys. Res. Lett., 25,
+    3367-3370.
+    * Dai, A., K. E. Trenberth, and T. Qian, 2004: A global data set of
+    Palmer Drought Severity Index for 1870-2002: Relationship with soil
+    moisture and effects of surface warming. J. Hydrometeorol., in
+    press.
+    * Jones, P.D., and A. Moberg, 2003: Hemispheric and large-scale
+    surface air temperature variations: An extensive revision and an
+    update to 2001. J. Climate, 16, 206-223.
+    * Palmer, W. C, 1965: Meteorological Drought. Res. Paper No.45,
+    58pp., Dept. of Commerce, Washington, D.C.
+    * Webb, R. S., C. E. Rosenzweig, and E. R. Levine, 1993: Specifying
+    land surface characteristics in general circulation models: soil
+    profile dataset and derived water-holding capacities. Global
+    Biogeochem. Cycles, 7, 97-108.
+    
+    Original Source:
+    
+    * NCAR's CGD (Climate and Global Dynamics Division) PDSI webpage
+    
+    Contact:
+    
+    * Physical Sciences Laboratory: Data Management
+    NOAA/ESRL/PSL
+    325 Broadway
+    Boulder, CO 80305-3328
+    psl.data@noaa.gov
+    
+    U.S. Department of Commerce | National Oceanic and Atmospheric
+    Administration
+    Earth System Research Laboratories | Physical Sciences Laboratory
+    http://psl.noaa.gov/data/gridded/data.pdsi.html
+    
