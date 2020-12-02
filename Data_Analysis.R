@@ -1,16 +1,21 @@
-test_ts_yr <- data.frame(c())
+load("master.Rda")
+load("master_wells.csv")
+master_wells <- read.csv(file = 'master_wells.csv')
+test_wells <- read.csv(file = 'test_wells.csv')
+
+test_ts_3mon <- data.frame(c())
 for (well in test_wells$mergeOn){
   ts <- filter(master, mergeOn == well)
   yr_ts <- ts %>%
-    mutate(date = lubridate::floor_date(date, "1 year"), mergeOn = mergeOn) %>%
+    mutate(date = lubridate::floor_date(date, "3 months"), mergeOn = mergeOn) %>%
     group_by(date, mergeOn) %>%
     summarize(Mean_depth=-1*mean(depth.to.GW..ft.))
-  test_ts_yr <- as.data.frame(rbind(test_ts_yr, yr_ts))
+  test_ts_3mon <- as.data.frame(rbind(test_ts_3mon, yr_ts))
   #assign(paste(well, "_3mon_ts", sep = ""), mon_ts)
 }
 
 # Now let's create time series graphs of these yearly means
-test_ts_yr %>%
+test_ts_3mon %>%
   ggplot(aes(x = date, y = Mean_depth)) + 
   geom_line() +
   xlab("Date") +
@@ -20,6 +25,8 @@ test_ts_yr %>%
   facet_wrap(~mergeOn)
 
 
+well_lat <- mean(filter(test_wells, mergeOn != well)$lat)
+well_long <- mean(filter(test_wells, mergeOn != well)$lon)
 
 
 library(ncdf4)
@@ -36,6 +43,10 @@ tunits
 pdsi_array <- ncvar_get(climate_output_sc,"pdsi")
 dim(pdsi_array)
 pdsi_array[,,1980]
+ncd_lon <- which(abs(lon-well_long)==min(abs(lon-well_long)))
+lon[ncd_lon]
+ncd_lat <- which(abs(lat-well_lat)==min(abs(lat-well_lat)))
+lat[ncd_lat]
 
 st_date <- as.Date("1800-01-01")
 date <- as.Date("2012-01-01")
@@ -48,10 +59,10 @@ as.Date(date_diff/24, origin = "1800-01-01")
 
 # generate random input weights, W1
 #W1=np.random.normal(size=[N, h]) # np is the numpy library
-W1 <- matrix(rnorm(73500), 147, 500) 
+W1 <- matrix(rnorm(1*500), 1, 500) 
 # X is a matrix of input training data, size MxN
-# M is number of input series (17 in our case)
-# N is the number of input time steps
+# M is number of time steps 
+# N is the number of input time series (17 in our case)
 # h is the number of neurons (500 in our case)
 
 # generate bias vector, b
@@ -60,6 +71,18 @@ b <- matrix(rnorm(500))
 
 # generate the A matrix (Eq 6)
 #a=np.dot(X,W1)+b 
+X <- pdsi_array[ncd_lon,ncd_lat,]
+X <- mutate(as.data.frame(X), PDSI = X, date = time, .keep = "none")
+X$date <- as.Date(X$date/24, origin = "1800-01-01")
+
+# Create a ts file of the PDSI data with 3 month averages and a time frame lining up with the well data
+ncd_ts <- X %>%
+  mutate(date = lubridate::floor_date(date, "3 months")) %>%
+  group_by(date) %>%
+  summarize(PDSI=mean(PDSI)) %>%
+  subset(ncd_ts, date %in% test_ts_3mon$date)
+
+a <- (ncd_ts$PDSI %*% W1) + t(b)
 #theta=np.maximum(a,0,a) # basis function
 
 
