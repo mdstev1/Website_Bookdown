@@ -72,23 +72,24 @@ b <- rnorm(500)
 
 # generate the A matrix (Eq 6)
 #a=np.dot(X,W1)+b 
-X <- pdsi_array[ncd_lon,ncd_lat,]
-X <- mutate(as.data.frame(X), PDSI = X, date = time, .keep = "none")
-X$date <- as.Date(X$date/24, origin = "1800-01-01")
+ncdf_ts <- pdsi_array[ncd_lon,ncd_lat,]
+ncdf_ts <- mutate(as.data.frame(ncdf_ts), PDSI = ncdf_ts, date = time, .keep = "none")
+ncdf_ts$date <- as.Date(ncdf_ts$date/24, origin = "1800-01-01")
 
 # Create a ts file of the PDSI data with 3 month averages and a time frame lining up with the well data
-ncdf_ts <- c()
-ncdf_ts <- X %>%
+X <- c()
+X <- ncdf_ts %>%
   mutate(date = lubridate::floor_date(date, "3 months")) %>%
   group_by(date) %>%
   summarize(PDSI=mean(PDSI)) %>%
   subset(date %in% test_ts_3mon$date)
-Y <- subset(w3mon_ts, date %in% ncdf_ts$date)
+Y <- subset(w3mon_ts, date %in% X$date)
 X <- subset(X, date %in% Y$date)
+Y <- Y$Mean_depth
 
 
 # Dot product
-a <- (ncdf_ts$PDSI %*% W1)
+a <- (X$PDSI %*% W1)
 ab <- a + rep(b, each = nrow(a))
 #theta=np.maximum(a,0,a) # basis function
 A <- pmax(ab, 0)
@@ -97,14 +98,15 @@ A <- pmax(ab, 0)
 # I=np.identity(N) # generate an identity matrix, NxN
 I = diag(1)
 lamb = 100
-lamb*I
+lamb_I <- lamb*I
 
 # fit using numpy library, uses a Moore-Penrose pseudoinverse of the matrix
 #W2=np.linalg.lstsq(theta.T.dot(theta) + lamb * I, theta.T.dot(Y)[0] 
 # lamb is the regularization parameter (in our case 100)
   # Y are the observed well data
   # this is from Eq 8
-W1 <- limsquare_function(t(A) %*% A + lamb*I, t(A) %*% Y)
+W2 <- solve(t(A) %*% A + rep(lamb_I, each = nrow(t(A))), t(A) %*% Y)
+test <- t(A) %*% A
 
 # Predict – X is a matrix of Earth observation data, W1, W2, and b are saved from above
   # a=np.dot(X,W1)+b 
