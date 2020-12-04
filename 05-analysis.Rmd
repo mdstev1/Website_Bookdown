@@ -51,7 +51,7 @@ Inverse Distance Weighting (IDW) is a spatial interpolation method that uses nea
 
 First, a year column will be added to the time series data frame created in the last section. As stated above, we will interpolate over 2012-2015.
 
-```{r, message=FALSE}
+```{r, message=FALSE, warning=FALSE}
 library(gstat)
 library(sp)
 
@@ -63,7 +63,7 @@ interp_values <- as.data.frame(c())
 ```
 
 Next, we will loop through each well and each year and perform the IDW interpolation. We will use the idw function to do this.
-```{r}
+```{r, warning=FALSE}
 for (well in test_wells$mergeOn){
   for (yr in yrs){
     lat <- filter(test_wells, mergeOn != well)$lat
@@ -82,7 +82,7 @@ for (well in test_wells$mergeOn){
     coordinates(loc)  <- ~ long + lat
     proj4string(loc) <- CRS("+proj=longlat +datum=WGS84")
     new <- idw(formula=Mean_depth ~ 1, locations = sample, newdata = loc, idp = 2.0)
-    interp_values <- rbind(interp_values, c(well, yr, new@data$var1.pred)
+    interp_values <- rbind(interp_values, c(well, yr, new@data$var1.pred))
   }
 }
 colnames(interp_values) <- c("mergeOn", "year", "value")

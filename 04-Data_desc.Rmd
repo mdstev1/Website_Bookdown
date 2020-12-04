@@ -43,7 +43,7 @@ leaflet() %>%
 ```
 
 In order to clean this data to make it more manageable, we are going to filter out all wells that do not have more than 180 observations and do not fall within the central valley boundary polygon.
-```{r message=FALSE}
+```{r, message=FALSE, warning=FALSE}
 library(sf)
 library(tidyverse)
 
@@ -70,7 +70,7 @@ CV_wells <- CV_shape %>%
 
 After an initial cleaning, the dataset can be further refined to find data that meet our criteria. For this analysis, we'd like as consistent of a database as possible, so we'll filter out data that doesn't span at least 15 years.
 
-```{r message=FALSE}
+```{r, message=FALSE, warning=FALSE}
 library(lubridate)
 
 # Next, we need to find the wells that have data that span across at least 15 years.
@@ -97,7 +97,7 @@ for (well in CV_wells$mergeOn) {
 
 Finally, the data can be summarized into 3 month blocks. Then, wells with coverage over the entire timeframe (19 years in this case) will be kept for further analysis. Once those wells are identified, a proper spatial distribution will need to be determined.
 
-```{r message=FALSE}
+```{r message=FALSE, warning=FALSE}
 # Next, we'll find wells that have at least one measurement every 3 months for 19 years
 w76 <- data.frame(c())
 for (well in w15){
