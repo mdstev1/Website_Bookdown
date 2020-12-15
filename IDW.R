@@ -34,7 +34,7 @@ for (well in test_wells$mergeOn){
     coordinates(loc)  <- ~ long + lat
     proj4string(loc) <- CRS("+proj=longlat +datum=WGS84")
     new <- idw(formula=Mean_depth ~ 1, locations = sample, newdata = loc, idp = 2.0)
-    interp_values <- rbind(interp_values, c(well, yr, new@data$var1.pred)
+    interp_values <- rbind(interp_values, c(well, yr, new@data$var1.pred))
   }
 }
 colnames(interp_values) <- c("mergeOn", "year", "value")
