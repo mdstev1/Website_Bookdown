@@ -1,7 +1,15 @@
+library(ggplot2)
+library(dplyr)
+library(data.table)
+
+
+# Load in the datasets created in the last section
 load("master.Rda")
 master_wells <- read.csv(file = 'master_wells.csv')
 test_wells <- read.csv(file = 'test_wells.csv')
 
+
+# Create dataset with all well data in 3 month increments
 test_ts_3mon <- data.frame(c())
 for (well in test_wells$mergeOn){
   ts <- filter(master, mergeOn == well)
@@ -9,9 +17,13 @@ for (well in test_wells$mergeOn){
     mutate(date = lubridate::floor_date(date, "3 months"), mergeOn = mergeOn) %>%
     group_by(date, mergeOn) %>%
     summarize(Mean_depth=-1*mean(depth.to.GW..ft.))
-  test_ts_3mon <- as.data.frame(rbind(test_ts_3mon, yr_ts))
+  test_ts_3mon <- as.data.frame(rbind(test_ts_3mon, w3mon_ts))
   #assign(paste(well, "_3mon_ts", sep = ""), mon_ts)
 }
+test_ts_3mon <- merge(test_ts_3mon, test_wells, by = "mergeOn")
+test_ts_3mon$WTE <- test_ts_3mon$Elev + test_ts_3mon$Mean_depth
+test_ts_3mon <- subset(test_ts_3mon, select = -c(X))
+write.csv(test_ts_3mon, file = "test_ts_3mon.csv")
 
 # Now let's create time series graphs of these yearly means
 test_ts_3mon %>%
@@ -61,7 +73,7 @@ as.Date(date_diff/24, origin = "1800-01-01")
 # generate random input weights, W1
 #W1=np.random.normal(size=[N, h]) # np is the numpy library
 W1 <- matrix(rnorm(1*500), 1, 500) 
-# X is a matrix of input training data, size MxN
+# X is a matrix of input training data, size MxN  (this is M columns by N rows)
 # M is number of time steps 
 # N is the number of input time series (17 in our case)
 # h is the number of neurons (500 in our case)
@@ -109,7 +121,7 @@ W2 <- solve(t(A) %*% A + rep(lamb_I, each = nrow(t(A))), t(A) %*% Y)
 test <- t(A) %*% A
 
 # Predict – X is a matrix of Earth observation data, W1, W2, and b are saved from above
-  # a=np.dot(X,W1)+b 
+  # a=np.dot(X,W1)+b  this is X dot W1
   # theta=np.maximum(a,0,a) # basis function 
   # Y_imputed= np.dot(theta,W2)
   
