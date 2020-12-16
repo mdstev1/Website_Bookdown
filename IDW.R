@@ -1,30 +1,29 @@
 #IDW
 library(gstat)
 library(sp)
+library(Metrics)
 
 # Load the datasets created previously
 load("master.Rda")
 master_wells <- read.csv(file = 'master_wells.csv')
 test_wells <- read.csv(file = 'test_wells.csv')
-test_ts_3mon_IDW <- read.csv(file = 'test_ts_3mon.csv')
+test_ts_3mon <- read.csv(file = 'test_ts_3mon.csv')
 
 # Extract the year from the date column
-test_ts_3mon_IDW[,"date"] <- as.Date(test_ts_3mon_IDW[,"date"])
-test_ts_3mon_IDW[,"year"] <- format(test_ts_3mon_IDW[,"date"], "%Y")
+test_ts_3mon[,"date"] <- as.Date(test_ts_3mon[,"date"])
+test_ts_3mon[,"year"] <- format(test_ts_3mon[,"date"], "%Y")
 
-# filter(test_wells, mergeOn != well)$lat
-
-
+# Create the dates list that we want to interpolate
 dates <- c("2012-01-01", "2012-04-01", "2012-07-01", "2012-10-01", 
            "2013-01-01", "2013-04-01", "2013-07-01", "2013-10-01",
            "2014-01-01", "2014-04-01", "2014-07-01", "2014-10-01",
-           "2015-01-01", "2015-04-01", "2015-07-01", "2015-10-01"
-)
+           "2015-01-01", "2015-04-01", "2015-07-01", "2015-10-01")
+
 interp_values <- as.data.frame(c())
 # Loop through and perform the IDW calculation for each well at each time step
-#for (well in test_wells$mergeOn){
+for (well in test_wells$mergeOn){
   for (dt in dates){
-    sample <- test_ts_3mon_IDW %>%
+    sample <- test_ts_3mon %>%
       filter(mergeOn != well) %>%
       filter(date == dt) %>%
       select(-lat, -lon, -Elev) %>%
@@ -40,7 +39,7 @@ interp_values <- as.data.frame(c())
     new <- idw(formula=WTE ~ 1, locations = sample, newdata = poi, idp = 2.0)
     interp_values <- rbind(interp_values, c(well, dt, new@data$var1.pred))
   }
-#}
+}
 
 # Rename the columns and set to proper data types
 colnames(interp_values) <- c("mergeOn", "date", "WTE_IDW")
@@ -48,32 +47,44 @@ interp_values$date <- as.Date(interp_values$date)
 interp_values$WTE_IDW <- as.numeric(interp_values$WTE_IDW)
 
 # Create new dataset that combines observed values with IDW values
-comp_data <- merge(interp_values,test_ts_3mon_IDW,by=c("mergeOn","date"))
-comp_data_experiment <- test_ts_3mon_IDW %>%
+comp_data <- merge(interp_values,test_ts_3mon,by=c("mergeOn","date"))
+comp_data_experiment <- test_ts_3mon %>%
   filter(mergeOn == well) %>%
-  left_join(interp_values,by=c("date"))
+  left_join(interp_values,by=c("date", "mergeOn"))
 
-# Plot the observed values vs. the IDW values
+# Plot all observed values vs. the IDW values for Well 29N03W18M001M
 comp_data_experiment %>%
   ggplot(aes(x = date)) + 
-  geom_line(aes(y = WTE), color = "steelblue") +
-  geom_line(aes(y = WTE_IDW), color = "orange") +
+  geom_line(aes(y = WTE, color = "steelblue")) +
+  geom_line(aes(y = WTE_IDW, color = "orange")) +
+  scale_color_discrete(name = "", labels = c("IDW Data", "Observed Data")) +
   xlab("Date") +
   ylab("Water Table Elevation (ft above sea level)") +
   ggtitle(well) +
-  theme(plot.title = element_text(hjust = 0.5))
-  #facet_wrap(~mergeOn)
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 
+# Plot 2012-2015 observed values vs. the IDW values
 comp_data %>%
   ggplot(aes(x = date)) + 
-  geom_line(aes(y = WTE), color = "steelblue") +
-  geom_line(aes(y = WTE_IDW), color = "orange") +
+  geom_line(aes(y = WTE, color = "steelblue")) +
+  geom_line(aes(y = WTE_IDW, color = "orange")) +
+  scale_color_discrete(name = "", labels = c("IDW Data", "Observed Data")) +
   xlab("Date") +
   ylab("Water Table Elevation (ft above sea level)") +
-  ggtitle(well) +
-  theme(plot.title = element_text(hjust = 0.5))
-#facet_wrap(~mergeOn)
+  ggtitle("All Wells") +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom") +
+  facet_wrap(~mergeOn)
 
+
+error_metrics_summary <- data.frame(Well=character(), RMSE=numeric())
+for (well in test_wells$mergeOn) {
+  comp_data_well <- comp_data %>%
+    filter(mergeOn == well)
+  rmse_error <-rmse(comp_data_well$WTE, comp_data_well$WTE_IDW)
+  error_metrics_summary <- rbind(error_metrics_summary, c(well, rmse_error))
+}
+names(error_metrics_summary)[1] <- "Well ID"
+names(error_metrics_summary)[2] <- "RMSE"
 
 # yr=2012
 # dt="2012-10-01"
