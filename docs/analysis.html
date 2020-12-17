@@ -24,7 +24,7 @@
 <meta name="author" content="Michael Stevens" />
 
 
-<meta name="date" content="2020-12-04" />
+<meta name="date" content="2020-12-17" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -154,7 +154,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="5" data-path="analysis.html"><a href="analysis.html"><i class="fa fa-check"></i><b>5</b> Analysis</a><ul>
 <li class="chapter" data-level="5.1" data-path="analysis.html"><a href="analysis.html#extreme-learning-machine"><i class="fa fa-check"></i><b>5.1</b> Extreme Learning Machine</a></li>
 <li class="chapter" data-level="5.2" data-path="analysis.html"><a href="analysis.html#inverse-distance-weighting"><i class="fa fa-check"></i><b>5.2</b> Inverse Distance Weighting</a></li>
-<li class="chapter" data-level="5.3" data-path="analysis.html"><a href="analysis.html#example-three"><i class="fa fa-check"></i><b>5.3</b> Example three</a></li>
+<li class="chapter" data-level="5.3" data-path="analysis.html"><a href="analysis.html#error-comparison"><i class="fa fa-check"></i><b>5.3</b> Error Comparison</a></li>
 </ul></li>
 <li class="chapter" data-level="6" data-path="final-words.html"><a href="final-words.html"><i class="fa fa-check"></i><b>6</b> Final Words</a></li>
 <li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
@@ -180,78 +180,226 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
             <section class="normal" id="section-">
 <div id="analysis" class="section level1">
 <h1><span class="header-section-number">Chapter 5</span> Analysis</h1>
-<p>This chapter will clean the data further and perform interpolation on each well from the chosen set. First, the Extreme Learning Machine method, described in Chapter 3, will be used to impute missing values. A spatial interpolation method, Inverse Distance Weighting (IDW) will then be used for comparison purposes. Finally, the accuracy of each method will be analyzed and compared.</p>
-<p>In order to determine accuracy, three years (2012-2015) of data will be imputed by each method. Then, the imputed data will be compared to the observed data.</p>
+<p>In this chapter, we will clean the data further and perform interpolation on each well from the chosen set. First, the Extreme Learning Machine method, described in Chapter 3, will be set up to impute missing values. A spatial interpolation method, Inverse Distance Weighting (IDW) will then be performed for comparison purposes. Finally, the accuracy of the IDW method will be analyzed and compared.</p>
+<p>In order to determine accuracy, three years (2012-2015) of data will be imputed. Then, the imputed data will be compared to the observed data.</p>
 <div id="extreme-learning-machine" class="section level2">
 <h2><span class="header-section-number">5.1</span> Extreme Learning Machine</h2>
-<p>As described previously, the ELM method forms a relationship between input data sources (in our case, remotely sensed earth observation data) and observed data. This relationship is then used to impute data for time periods without measurements.</p>
-<p>First, we will need to create a time series data frame that contains all the measurements from each well. We will summarize the data by year to simplify things.</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="analysis.html#cb12-1"></a><span class="kw">load</span>(<span class="st">&quot;code/master.Rda&quot;</span>)</span>
-<span id="cb12-2"><a href="analysis.html#cb12-2"></a>master_wells &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="dt">file =</span> <span class="st">&#39;code/master_wells.csv&#39;</span>)</span>
-<span id="cb12-3"><a href="analysis.html#cb12-3"></a></span>
-<span id="cb12-4"><a href="analysis.html#cb12-4"></a>test_wells &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&#39;25N03W11B003M&#39;</span>, </span>
-<span id="cb12-5"><a href="analysis.html#cb12-5"></a>                <span class="st">&#39;29N03W18M001M&#39;</span>, </span>
-<span id="cb12-6"><a href="analysis.html#cb12-6"></a>                <span class="st">&#39;24N02W29N004M&#39;</span>, </span>
-<span id="cb12-7"><a href="analysis.html#cb12-7"></a>                <span class="st">&#39;24N02W24D003M&#39;</span>,</span>
-<span id="cb12-8"><a href="analysis.html#cb12-8"></a>                <span class="st">&#39;24N02W03B001M&#39;</span>)</span>
-<span id="cb12-9"><a href="analysis.html#cb12-9"></a>test_wells &lt;-<span class="st"> </span><span class="kw">subset</span>(master_wells, mergeOn <span class="op">%in%</span><span class="st"> </span>test_wells)</span>
-<span id="cb12-10"><a href="analysis.html#cb12-10"></a></span>
-<span id="cb12-11"><a href="analysis.html#cb12-11"></a>test_ts_yr &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="kw">c</span>())</span>
-<span id="cb12-12"><a href="analysis.html#cb12-12"></a><span class="cf">for</span> (well <span class="cf">in</span> test_wells<span class="op">$</span>mergeOn){</span>
-<span id="cb12-13"><a href="analysis.html#cb12-13"></a>  ts &lt;-<span class="st"> </span><span class="kw">filter</span>(master, mergeOn <span class="op">==</span><span class="st"> </span>well)</span>
-<span id="cb12-14"><a href="analysis.html#cb12-14"></a>  yr_ts &lt;-<span class="st"> </span>ts <span class="op">%&gt;%</span></span>
-<span id="cb12-15"><a href="analysis.html#cb12-15"></a><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">date =</span> lubridate<span class="op">::</span><span class="kw">floor_date</span>(date, <span class="st">&quot;1 year&quot;</span>), <span class="dt">mergeOn =</span> mergeOn) <span class="op">%&gt;%</span></span>
-<span id="cb12-16"><a href="analysis.html#cb12-16"></a><span class="st">    </span><span class="kw">group_by</span>(date, mergeOn) <span class="op">%&gt;%</span></span>
-<span id="cb12-17"><a href="analysis.html#cb12-17"></a><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">Mean_depth=</span><span class="op">-</span><span class="dv">1</span><span class="op">*</span><span class="kw">mean</span>(depth.to.GW..ft.))</span>
-<span id="cb12-18"><a href="analysis.html#cb12-18"></a>  test_ts_yr &lt;-<span class="st"> </span><span class="kw">as.data.frame</span>(<span class="kw">rbind</span>(test_ts_yr, yr_ts))</span>
-<span id="cb12-19"><a href="analysis.html#cb12-19"></a>  <span class="co">#assign(paste(well, &quot;_3mon_ts&quot;, sep = &quot;&quot;), mon_ts)</span></span>
-<span id="cb12-20"><a href="analysis.html#cb12-20"></a>}</span></code></pre></div>
-<p>We can also create a facet-wrapped group of time series graphs for each well.</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="analysis.html#cb13-1"></a><span class="co"># Now let&#39;s create time series graphs of these yearly means</span></span>
-<span id="cb13-2"><a href="analysis.html#cb13-2"></a>test_ts_yr <span class="op">%&gt;%</span></span>
-<span id="cb13-3"><a href="analysis.html#cb13-3"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> date, <span class="dt">y =</span> Mean_depth)) <span class="op">+</span><span class="st"> </span></span>
-<span id="cb13-4"><a href="analysis.html#cb13-4"></a><span class="st">  </span><span class="kw">geom_line</span>() <span class="op">+</span></span>
-<span id="cb13-5"><a href="analysis.html#cb13-5"></a><span class="st">  </span><span class="kw">xlab</span>(<span class="st">&quot;Date&quot;</span>) <span class="op">+</span></span>
-<span id="cb13-6"><a href="analysis.html#cb13-6"></a><span class="st">  </span><span class="kw">ylab</span>(<span class="st">&quot;Depth (ft)&quot;</span>) <span class="op">+</span></span>
-<span id="cb13-7"><a href="analysis.html#cb13-7"></a><span class="st">  </span><span class="kw">ggtitle</span>(well) <span class="op">+</span></span>
-<span id="cb13-8"><a href="analysis.html#cb13-8"></a><span class="st">  </span><span class="kw">theme</span>(<span class="dt">plot.title =</span> <span class="kw">element_text</span>(<span class="dt">hjust =</span> <span class="fl">0.5</span>)) <span class="op">+</span></span>
-<span id="cb13-9"><a href="analysis.html#cb13-9"></a><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>mergeOn)</span></code></pre></div>
-<p><img src="Website_Bookdown_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>As described previously, the ELM method forms a relationship between input data sources (in our case, remotely sensed earth observation data) and observed data. This relationship is then used to impute data for time periods without measurements. <span class="citation">Evans (<a href="#ref-Evans-2019" role="doc-biblioref">2020</a>)</span> demonstrated this method in Python with promising results. Unfortunately, due to time constraints and knowledge constraints, the conversion from Python to R was not completed in this paper. The full scope of this undertaking was not evident to the author at the outset (it should be noted that <span class="citation">Evans (<a href="#ref-Evans-2019" role="doc-biblioref">2020</a>)</span> shared psuedocode in their paper; the full process is much more involved). However, in future work, we hope to be able to solve this method in R. This section will merely set up the data and methods that future work can build upon.</p>
+<p>First, we will need to load previously created datasets.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="analysis.html#cb13-1"></a><span class="co"># Load existing datasets</span></span>
+<span id="cb13-2"><a href="analysis.html#cb13-2"></a><span class="kw">load</span>(<span class="st">&quot;Data/master.Rda&quot;</span>)</span>
+<span id="cb13-3"><a href="analysis.html#cb13-3"></a>master_wells &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="dt">file =</span> <span class="st">&#39;Data/master_wells.csv&#39;</span>)</span>
+<span id="cb13-4"><a href="analysis.html#cb13-4"></a>test_wells &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="dt">file =</span> <span class="st">&#39;Data/test_wells.csv&#39;</span>)</span></code></pre></div>
+<p>In order to prepare the data for analysis, the data must be summarized to uniformly spaced time steps. We will summarize this dataset to 3 month (quarterly) averages. In order to interpolate, water table elevations must be generated, rather than simple depth to groundwater measurements. This is because different depths may extend to the same water table elevation, depending on the ground elevation. This is less important for the ELM method, but becomes very important in spatial interpolation, discussed in the next section.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="analysis.html#cb14-1"></a><span class="co"># Create dataset with all well data in 3 month increments</span></span>
+<span id="cb14-2"><a href="analysis.html#cb14-2"></a>test_ts_3mon &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="kw">c</span>())</span>
+<span id="cb14-3"><a href="analysis.html#cb14-3"></a><span class="cf">for</span> (well <span class="cf">in</span> test_wells<span class="op">$</span>mergeOn){</span>
+<span id="cb14-4"><a href="analysis.html#cb14-4"></a>  ts &lt;-<span class="st"> </span><span class="kw">filter</span>(master, mergeOn <span class="op">==</span><span class="st"> </span>well)</span>
+<span id="cb14-5"><a href="analysis.html#cb14-5"></a>  w3mon_ts &lt;-<span class="st"> </span>ts <span class="op">%&gt;%</span></span>
+<span id="cb14-6"><a href="analysis.html#cb14-6"></a><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">date =</span> lubridate<span class="op">::</span><span class="kw">floor_date</span>(date, <span class="st">&quot;3 months&quot;</span>), <span class="dt">mergeOn =</span> mergeOn) <span class="op">%&gt;%</span></span>
+<span id="cb14-7"><a href="analysis.html#cb14-7"></a><span class="st">    </span><span class="kw">group_by</span>(date, mergeOn) <span class="op">%&gt;%</span></span>
+<span id="cb14-8"><a href="analysis.html#cb14-8"></a><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">Mean_depth=</span><span class="op">-</span><span class="dv">1</span><span class="op">*</span><span class="kw">mean</span>(depth.to.GW..ft.))</span>
+<span id="cb14-9"><a href="analysis.html#cb14-9"></a>  test_ts_3mon &lt;-<span class="st"> </span><span class="kw">as.data.frame</span>(<span class="kw">rbind</span>(test_ts_3mon, w3mon_ts))</span>
+<span id="cb14-10"><a href="analysis.html#cb14-10"></a>  <span class="co">#assign(paste(well, &quot;_3mon_ts&quot;, sep = &quot;&quot;), mon_ts)</span></span>
+<span id="cb14-11"><a href="analysis.html#cb14-11"></a>}</span>
+<span id="cb14-12"><a href="analysis.html#cb14-12"></a></span>
+<span id="cb14-13"><a href="analysis.html#cb14-13"></a><span class="co"># Format time series dataframe and add WTE column</span></span>
+<span id="cb14-14"><a href="analysis.html#cb14-14"></a>test_ts_3mon &lt;-<span class="st"> </span><span class="kw">merge</span>(test_ts_3mon, test_wells, <span class="dt">by =</span> <span class="st">&quot;mergeOn&quot;</span>)</span>
+<span id="cb14-15"><a href="analysis.html#cb14-15"></a>test_ts_3mon<span class="op">$</span>WTE &lt;-<span class="st"> </span>test_ts_3mon<span class="op">$</span>Elev <span class="op">+</span><span class="st"> </span>test_ts_3mon<span class="op">$</span>Mean_depth</span>
+<span id="cb14-16"><a href="analysis.html#cb14-16"></a>test_ts_3mon &lt;-<span class="st"> </span><span class="kw">subset</span>(test_ts_3mon, <span class="dt">select =</span> <span class="op">-</span><span class="kw">c</span>(X))</span>
+<span id="cb14-17"><a href="analysis.html#cb14-17"></a><span class="kw">write.csv</span>(test_ts_3mon, <span class="dt">file =</span> <span class="st">&quot;Data/test_ts_3mon.csv&quot;</span>)</span></code></pre></div>
+<p>Now, we will create a facet-wrapped group of time series graphs for each well using the quarterly averages that we just created.</p>
+<pre rmessage="FALSE," warning="FALSE"><code># Now let&#39;s create time series graphs of these quarterly means
+test_ts_3mon %&gt;%
+  ggplot(aes(x = date, y = WTE)) + 
+  geom_line(color = &quot;blue&quot;) +
+  xlab(&quot;Date&quot;) +
+  ylab(&quot;Water Table Elevation (ft above sea level)&quot;) +
+  ggtitle(&quot;Quarterly Time Series for Each well&quot;) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~mergeOn)</code></pre>
+<p>Next, we will load in a remotely sensed earth observation dataset, the Palmer Drought Severity Index (PDSI). The PDSI is one of the measures that we can correlate groundwater levels with. For the sake of this demonstration, we will only use the PDSI. But for more accurate results, multiple earth observation datasets would need to be used.</p>
+<p>The PDSI data is hosted by the National Oceanic and Atmospheric Administration’s (NOAA) Physical Sciences Laboratory (<span class="citation">Dai and Qian (<a href="#ref-PDSI" role="doc-biblioref">n.d.</a>)</span>). It spans from 1850 to 2014. There is a normal dataset and a “self-calibrated” dataset; we will use the latter because it has more recent data (it spans up through 2014, whereas the normal dataset spans up through 2005). It is stored in a netcdf file, which means we will need to utilize the ncdf4 library.</p>
+<p>We will start by opening the data file and store it in a data object. We will then print the metadata and inspect.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="analysis.html#cb16-1"></a><span class="co"># Store pdsi data in dataframe and print metadata</span></span>
+<span id="cb16-2"><a href="analysis.html#cb16-2"></a><span class="kw">library</span>(ncdf4)</span>
+<span id="cb16-3"><a href="analysis.html#cb16-3"></a>climate_output_sc &lt;-<span class="st"> </span><span class="kw">nc_open</span>(<span class="st">&quot;Data/pdsi.mon.mean.selfcalibrated.nc&quot;</span>)</span>
+<span id="cb16-4"><a href="analysis.html#cb16-4"></a><span class="kw">print</span>(climate_output_sc)</span></code></pre></div>
+<pre><code>## File Data/pdsi.mon.mean.selfcalibrated.nc (NC_FORMAT_CLASSIC):
+## 
+##      1 variables (excluding dimension variables):
+##         float pdsi[lon,lat,time]   
+##             statistic: Mean
+##             missing_value: -99999
+##             dataset: Dai Palmer Drought Severity Index: Self-calibrated
+##             long_name: Monthly Self-calibrated Palmer Drought Severity Index using Penman-Monteith PE
+##             level_desc: Surface
+##             var_desc: Palmer Drought Severity Index
+##             least_significant_digit: 2
+##             units: Standardized Units of Relative Dry and Wet
+##             actual_range: -8.16020011901855
+##              actual_range: 8.16014289855957
+##             valid_range: -100
+##              valid_range: 100
+## 
+##      3 dimensions:
+##         lon  Size:144
+##             units: degrees_east
+##             long_name: Longitude
+##             actual_range: -178.75
+##              actual_range: 178.75
+##             standard_name: longitude
+##             axis: X
+##         lat  Size:55
+##             units: degrees_north
+##             long_name: Latitude
+##             actual_range: -58.75
+##              actual_range: 76.25
+##             standard_name: latitude
+##             axis: Y
+##         time  Size:1980   *** is unlimited ***
+##             units: hours since 1800-01-01 00:00:0.0
+##             actual_range: 438288
+##              actual_range: 1883904
+##             long_name: Time
+##             delta_t: 0000-01-00 00:00:00
+##             avg_period: 0000-01-00 00:00:00
+##             standard_name: time
+##             axis: T
+## 
+##     9 global attributes:
+##         title: Global Monthly Dai Palmer Drought Severity Index
+##         history: created Apr 2013 from data at NCAR webpage:updated Nov 2015 from new dataset version
+##         References: https://www.psl.noaa.gov/data/gridded/data.pdsi.html
+##         original_source: NCAR/UCAR: A Dai http://www.cgd.ucar.edu/cas/catalog/climind/pdsi.html.
+##         comments: original creation date: Thu Oct 25 15:25:40 MDT 2012 at NCAR. Updated at PSD Oct 2016 with corrected NCAR data
+##         Conventions: COARDS
+##         details: see ncar for more detials and updates
+##         description: 
+## Monthly Self-calibrated Palmer Drought Severity Index (scPDSI)     
+## calculated using observed surface air temperature (HadCRUT4 from   
+## http://www.cru.uea.ac.uk/cru/data/temperature/ ) and               
+## precipitation (from Dai et al. (1997, J.Clim: for 1870-1947) +     
+## Chen et al. (2002, J. Hydromet.: for 1948-1978 + GPCP v2.2 for     
+## 1979-present. The Dai and Chen P data were adjusted to have the    
+## same mean as the GPCP data over the 1979-1996 period).             
+## Calibration (or reference) period is 1950-1979.                    
+## Wind speed and air pressure data were from 20CR v2. Other data     
+## were based on CRU TS3.22. Documention:  	                   
+## Dai, A., 2011a: Characteristics and trends in various forms of the 
+## Palmer Drought Severity Index (PDSI) during 1900-2008. J. Geophys. 
+## Res., 116, D12115, doi:10.1029/2010JD015541.			   
+## Dai, A., K. E. Trenberth, and T. Qian, 2004: A global data set of  
+## Palmer Drought Severity Index for 1870-2002: Relationship with soil
+## moisture and effects of surface warming. J. Hydrometeorology, 5,   
+## 1117-1130. Data source: Dr. A. Dai/NCAR (adai@ucar.edu). See       
+## http://www.cgd.ucar.edu/cas/catalog/climind/pdsi.html for updates. 
+## WARNING: PDSI and scPDSI over the higher latitudes (e.g., &gt;50deg.) 
+## may not be a good proxy of soil moisutre content. Also, PDSI and   
+## scPDSI are highly autocorrelated indices not good at resolving     
+## sub-seasonal variations.  Please use with caution!                 
+## This is a normalized version so that every grid box has the same   
+## s.d. as that in the central U.S. during the calibr. period (1950-79)
+##         dataset_title: Palmer Drought Severity Index</code></pre>
+<p>The important takeaway from this metadata is that there are three different variables - latitude, longitude, and time - over which the PDSI data spans across. This is why it was stored in a netCDF file format.</p>
+<p>We will store each of these variables in separate arrays. We will also store the PDSI values in an array and extract the values that we need based on the lat/long/time variables. We will start by obtaining an the latitude and longitude for our test well, which will be well 29N03W18M001M. This will be used to extract only the data we need from the pdsi dataset. Then the arrays can be created.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="analysis.html#cb18-1"></a><span class="co"># Create lat/long objects that will be used to obtain the pdsi data for the study area</span></span>
+<span id="cb18-2"><a href="analysis.html#cb18-2"></a>well_lat &lt;-<span class="st"> </span><span class="kw">mean</span>(<span class="kw">filter</span>(test_wells, mergeOn <span class="op">==</span><span class="st"> </span>well)<span class="op">$</span>lat)</span>
+<span id="cb18-3"><a href="analysis.html#cb18-3"></a>well_long &lt;-<span class="st"> </span><span class="kw">mean</span>(<span class="kw">filter</span>(test_wells, mergeOn <span class="op">==</span><span class="st"> </span>well)<span class="op">$</span>lon)</span>
+<span id="cb18-4"><a href="analysis.html#cb18-4"></a></span>
+<span id="cb18-5"><a href="analysis.html#cb18-5"></a><span class="co"># Obtain the lat,long, and time arrays from the data</span></span>
+<span id="cb18-6"><a href="analysis.html#cb18-6"></a>lat &lt;-<span class="st"> </span><span class="kw">ncvar_get</span>(climate_output_sc,<span class="st">&quot;lat&quot;</span>)</span>
+<span id="cb18-7"><a href="analysis.html#cb18-7"></a>lon &lt;-<span class="st"> </span><span class="kw">ncvar_get</span>(climate_output_sc,<span class="st">&quot;lon&quot;</span>)</span>
+<span id="cb18-8"><a href="analysis.html#cb18-8"></a>time &lt;-<span class="st"> </span><span class="kw">ncvar_get</span>(climate_output_sc,<span class="st">&quot;time&quot;</span>)</span>
+<span id="cb18-9"><a href="analysis.html#cb18-9"></a></span>
+<span id="cb18-10"><a href="analysis.html#cb18-10"></a><span class="co"># Obtain pdsi data and store in array</span></span>
+<span id="cb18-11"><a href="analysis.html#cb18-11"></a>pdsi_array &lt;-<span class="st"> </span><span class="kw">ncvar_get</span>(climate_output_sc,<span class="st">&quot;pdsi&quot;</span>)</span>
+<span id="cb18-12"><a href="analysis.html#cb18-12"></a></span>
+<span id="cb18-13"><a href="analysis.html#cb18-13"></a><span class="co"># Find the lat/long coordinates that are closest to the average well_long and well_lat</span></span>
+<span id="cb18-14"><a href="analysis.html#cb18-14"></a>ncd_lon &lt;-<span class="st"> </span><span class="kw">which</span>(<span class="kw">abs</span>(lon<span class="op">-</span>well_long)<span class="op">==</span><span class="kw">min</span>(<span class="kw">abs</span>(lon<span class="op">-</span>well_long)))</span>
+<span id="cb18-15"><a href="analysis.html#cb18-15"></a>ncd_lat &lt;-<span class="st"> </span><span class="kw">which</span>(<span class="kw">abs</span>(lat<span class="op">-</span>well_lat)<span class="op">==</span><span class="kw">min</span>(<span class="kw">abs</span>(lat<span class="op">-</span>well_lat)))</span>
+<span id="cb18-16"><a href="analysis.html#cb18-16"></a><span class="co">#Print them</span></span>
+<span id="cb18-17"><a href="analysis.html#cb18-17"></a><span class="kw">cat</span>(<span class="st">&quot;Lat:&quot;</span>, lat[ncd_lat], <span class="st">&quot;, Long:&quot;</span>, lon[ncd_lon])</span></code></pre></div>
+<pre><code>## Lat: 38.75 , Long: -121.25</code></pre>
+<p>Now that the data is set up, we will explore - briefly - the process for ELM. As this analysis has not been performed successfully in R, we will not spend an inordinate amount of time on it, except to introduce the concept. The detailed explanation of this method can be found in the study performed by <span class="citation">Evans (<a href="#ref-Evans-2019" role="doc-biblioref">2020</a>)</span> and all clarification should be sought in that paper. This report merely sets up the process.</p>
+<p>First, we generate a set of random input weights. These will have a normal distribution and will create a 1 x 500 matrix. Next, the bias vector is generated with 500 randomized values (creating a 500 x 1 matrix). Then, we will extract a time series for the study area, which is the lat/long coordinate in the PDSI array that is closest to the well. The well we will be using is Well #29N03W18M001M.</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="analysis.html#cb20-1"></a><span class="co"># generate random input weights, W1</span></span>
+<span id="cb20-2"><a href="analysis.html#cb20-2"></a>W1 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">rnorm</span>(<span class="dv">1</span><span class="op">*</span><span class="dv">500</span>), <span class="dv">1</span>, <span class="dv">500</span>) </span>
+<span id="cb20-3"><a href="analysis.html#cb20-3"></a></span>
+<span id="cb20-4"><a href="analysis.html#cb20-4"></a><span class="co"># generate bias vector, b</span></span>
+<span id="cb20-5"><a href="analysis.html#cb20-5"></a>b &lt;-<span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">500</span>)</span>
+<span id="cb20-6"><a href="analysis.html#cb20-6"></a></span>
+<span id="cb20-7"><a href="analysis.html#cb20-7"></a><span class="co"># Create a time series of the PDSI data for the selected lat/long</span></span>
+<span id="cb20-8"><a href="analysis.html#cb20-8"></a>ncdf_ts &lt;-<span class="st"> </span>pdsi_array[ncd_lon,ncd_lat,]</span>
+<span id="cb20-9"><a href="analysis.html#cb20-9"></a>ncdf_ts &lt;-<span class="st"> </span><span class="kw">mutate</span>(<span class="kw">as.data.frame</span>(ncdf_ts), <span class="dt">date =</span> time, <span class="dt">PDSI =</span> ncdf_ts, <span class="dt">.keep =</span> <span class="st">&quot;none&quot;</span>)</span>
+<span id="cb20-10"><a href="analysis.html#cb20-10"></a>ncdf_ts<span class="op">$</span>date &lt;-<span class="st"> </span><span class="kw">as.Date</span>(ncdf_ts<span class="op">$</span>date<span class="op">/</span><span class="dv">24</span>, <span class="dt">origin =</span> <span class="st">&quot;1800-01-01&quot;</span>)</span>
+<span id="cb20-11"><a href="analysis.html#cb20-11"></a><span class="kw">tail</span>(ncdf_ts)</span></code></pre></div>
+<pre><code>##            date        PDSI
+## 1975 2014-07-01 -1.96039844
+## 1976 2014-08-01 -0.36029744
+## 1977 2014-09-01 -0.06562341
+## 1978 2014-10-01 -0.65678751
+## 1979 2014-11-01 -0.76688999
+## 1980 2014-12-01  0.30445653</code></pre>
+<p>As we can see, the PDSI values show up and correlate to monthly time steps. To simplify the analysis and eliminate noise, we will re-sample the data to three-month intervals. We will also clip the data to the time period that we have observed groundwater level data for.</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="analysis.html#cb22-1"></a><span class="co"># Create a ts dataframe of the PDSI data with 3 month averages and a time frame lining up with the well data</span></span>
+<span id="cb22-2"><a href="analysis.html#cb22-2"></a>X &lt;-<span class="st"> </span><span class="kw">c</span>()</span>
+<span id="cb22-3"><a href="analysis.html#cb22-3"></a>X &lt;-<span class="st"> </span>ncdf_ts <span class="op">%&gt;%</span></span>
+<span id="cb22-4"><a href="analysis.html#cb22-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">date =</span> lubridate<span class="op">::</span><span class="kw">floor_date</span>(date, <span class="st">&quot;3 months&quot;</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb22-5"><a href="analysis.html#cb22-5"></a><span class="st">  </span><span class="kw">group_by</span>(date) <span class="op">%&gt;%</span></span>
+<span id="cb22-6"><a href="analysis.html#cb22-6"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">PDSI=</span><span class="kw">mean</span>(PDSI)) <span class="op">%&gt;%</span></span>
+<span id="cb22-7"><a href="analysis.html#cb22-7"></a><span class="st">  </span><span class="kw">subset</span>(date <span class="op">%in%</span><span class="st"> </span>w3mon_ts<span class="op">$</span>date)</span></code></pre></div>
+<p>Now we can create the A Matrix. This matrix is used to determine the weights for the observed data correlation.</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="analysis.html#cb23-1"></a><span class="co"># generate the A matrix</span></span>
+<span id="cb23-2"><a href="analysis.html#cb23-2"></a>a &lt;-<span class="st"> </span>(X<span class="op">$</span>PDSI <span class="op">%*%</span><span class="st"> </span>W1)</span>
+<span id="cb23-3"><a href="analysis.html#cb23-3"></a>ab &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span><span class="kw">rep</span>(b, <span class="dt">each =</span> <span class="kw">nrow</span>(a))</span>
+<span id="cb23-4"><a href="analysis.html#cb23-4"></a></span>
+<span id="cb23-5"><a href="analysis.html#cb23-5"></a><span class="co"># basis function (theta) sets negative values to zero</span></span>
+<span id="cb23-6"><a href="analysis.html#cb23-6"></a>A &lt;-<span class="st"> </span><span class="kw">pmax</span>(ab, <span class="dv">0</span>)</span></code></pre></div>
+<p>The last thing we will do in this analysis is to generate the identity matrix. We will also apply a weight, lambda, to the identity matrix.</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="analysis.html#cb24-1"></a>I =<span class="st"> </span><span class="kw">diag</span>(<span class="dv">1</span>)</span>
+<span id="cb24-2"><a href="analysis.html#cb24-2"></a>lamb =<span class="st"> </span><span class="dv">100</span></span>
+<span id="cb24-3"><a href="analysis.html#cb24-3"></a>lamb_I &lt;-<span class="st"> </span>lamb<span class="op">*</span>I</span></code></pre></div>
+<p>This concludes the set up for the ELM method. Next, we will discuss a spatial interpolation method, IDW, which will provide a comparison tool for the ELM. In future works, we will complete this analysis of ELM.</p>
 </div>
 <div id="inverse-distance-weighting" class="section level2">
 <h2><span class="header-section-number">5.2</span> Inverse Distance Weighting</h2>
-<p>Inverse Distance Weighting (IDW) is a spatial interpolation method that uses nearby observations to interpolate an unknown value at a location. IDW places more weight on observed values that are closer to the point in question. It is a fairly simple method of interpolation, and can be implemented in R fairly easily, as will be shown.</p>
-<p>First, a year column will be added to the time series data frame created in the last section. As stated above, we will interpolate over 2012-2015.</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="analysis.html#cb14-1"></a><span class="kw">library</span>(gstat)</span>
-<span id="cb14-2"><a href="analysis.html#cb14-2"></a><span class="kw">library</span>(sp)</span>
-<span id="cb14-3"><a href="analysis.html#cb14-3"></a></span>
-<span id="cb14-4"><a href="analysis.html#cb14-4"></a><span class="co">#Create a year column from the date in the test_ts_yr data frame.</span></span>
-<span id="cb14-5"><a href="analysis.html#cb14-5"></a>test_ts_yr[,<span class="st">&quot;year&quot;</span>] &lt;-<span class="st"> </span><span class="kw">format</span>(test_ts_yr[,<span class="st">&quot;date&quot;</span>], <span class="st">&quot;%Y&quot;</span>)</span>
-<span id="cb14-6"><a href="analysis.html#cb14-6"></a><span class="co">#Initialize the years for interpolation and a dataframe to store the values</span></span>
-<span id="cb14-7"><a href="analysis.html#cb14-7"></a>yrs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">2012</span><span class="op">:</span><span class="dv">2015</span>)</span>
-<span id="cb14-8"><a href="analysis.html#cb14-8"></a>interp_values &lt;-<span class="st"> </span><span class="kw">as.data.frame</span>(<span class="kw">c</span>())</span></code></pre></div>
-<p>Next, we will loop through each well and each year and perform the IDW interpolation. We will use the idw function to do this.</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="analysis.html#cb15-1"></a><span class="cf">for</span> (well <span class="cf">in</span> test_wells<span class="op">$</span>mergeOn){</span>
-<span id="cb15-2"><a href="analysis.html#cb15-2"></a>  <span class="cf">for</span> (yr <span class="cf">in</span> yrs){</span>
-<span id="cb15-3"><a href="analysis.html#cb15-3"></a>    lat &lt;-<span class="st"> </span><span class="kw">filter</span>(test_wells, mergeOn <span class="op">!=</span><span class="st"> </span>well)<span class="op">$</span>lat</span>
-<span id="cb15-4"><a href="analysis.html#cb15-4"></a>    long &lt;-<span class="st"> </span><span class="kw">filter</span>(test_wells, mergeOn <span class="op">!=</span><span class="st"> </span>well)<span class="op">$</span>lon</span>
-<span id="cb15-5"><a href="analysis.html#cb15-5"></a>    depth &lt;-<span class="st"> </span>test_ts_yr <span class="op">%&gt;%</span></span>
-<span id="cb15-6"><a href="analysis.html#cb15-6"></a><span class="st">      </span><span class="kw">filter</span>(mergeOn <span class="op">!=</span><span class="st"> </span>well) <span class="op">%&gt;%</span></span>
-<span id="cb15-7"><a href="analysis.html#cb15-7"></a><span class="st">      </span><span class="kw">filter</span>(year <span class="op">==</span><span class="st"> </span>yr) <span class="op">%&gt;%</span></span>
-<span id="cb15-8"><a href="analysis.html#cb15-8"></a><span class="st">      </span><span class="kw">select</span>(Mean_depth) <span class="op">%&gt;%</span></span>
-<span id="cb15-9"><a href="analysis.html#cb15-9"></a><span class="st">      </span><span class="kw">as.list</span>()</span>
-<span id="cb15-10"><a href="analysis.html#cb15-10"></a>    sample &lt;-<span class="st"> </span><span class="kw">data.frame</span>(lat, long, depth)</span>
-<span id="cb15-11"><a href="analysis.html#cb15-11"></a>    <span class="kw">coordinates</span>(sample) =<span class="st"> </span><span class="er">~</span>long<span class="op">+</span>lat</span>
-<span id="cb15-12"><a href="analysis.html#cb15-12"></a>    <span class="kw">proj4string</span>(sample) &lt;-<span class="st"> </span><span class="kw">CRS</span>(<span class="st">&quot;+proj=longlat +datum=WGS84&quot;</span>)</span>
-<span id="cb15-13"><a href="analysis.html#cb15-13"></a>    loc &lt;-<span class="st"> </span><span class="kw">data.frame</span>(</span>
-<span id="cb15-14"><a href="analysis.html#cb15-14"></a>      <span class="dt">long =</span> <span class="kw">filter</span>(test_wells, mergeOn <span class="op">==</span><span class="st"> </span>well)<span class="op">$</span>lon, </span>
-<span id="cb15-15"><a href="analysis.html#cb15-15"></a>      <span class="dt">lat =</span> <span class="kw">filter</span>(test_wells, mergeOn <span class="op">==</span><span class="st"> </span>well)<span class="op">$</span>lat)</span>
-<span id="cb15-16"><a href="analysis.html#cb15-16"></a>    <span class="kw">coordinates</span>(loc)  &lt;-<span class="st"> </span><span class="er">~</span><span class="st"> </span>long <span class="op">+</span><span class="st"> </span>lat</span>
-<span id="cb15-17"><a href="analysis.html#cb15-17"></a>    <span class="kw">proj4string</span>(loc) &lt;-<span class="st"> </span><span class="kw">CRS</span>(<span class="st">&quot;+proj=longlat +datum=WGS84&quot;</span>)</span>
-<span id="cb15-18"><a href="analysis.html#cb15-18"></a>    new &lt;-<span class="st"> </span><span class="kw">idw</span>(<span class="dt">formula=</span>Mean_depth <span class="op">~</span><span class="st"> </span><span class="dv">1</span>, <span class="dt">locations =</span> sample, <span class="dt">newdata =</span> loc, <span class="dt">idp =</span> <span class="fl">2.0</span>)</span>
-<span id="cb15-19"><a href="analysis.html#cb15-19"></a>    interp_values &lt;-<span class="st"> </span><span class="kw">rbind</span>(interp_values, <span class="kw">c</span>(well, yr, new<span class="op">@</span>data<span class="op">$</span>var1.pred))</span>
-<span id="cb15-20"><a href="analysis.html#cb15-20"></a>  }</span>
-<span id="cb15-21"><a href="analysis.html#cb15-21"></a>}</span></code></pre></div>
+<p>Previously, we discussed spatial interpolation methods, such as Kriging. Inverse Distance Weighting (IDW) is essentially a simplified version of Kriging. IDW is a spatial interpolation method that uses nearby observations to interpolate an unknown value at a location. IDW places more weight on observed values that are closer to the point in question. It is a fairly simple method of interpolation, and can be implemented in R fairly easily, as will be shown. We will first interpolate the values over a predefined set of years and then compare the IDW solutions with the observed data.</p>
+<p>First, we will add the datasets created previously. As stated above, we will interpolate over 2012-2015.</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="analysis.html#cb25-1"></a><span class="co"># Load the datasets created previously</span></span>
+<span id="cb25-2"><a href="analysis.html#cb25-2"></a><span class="kw">load</span>(<span class="st">&quot;Data/master.Rda&quot;</span>)</span>
+<span id="cb25-3"><a href="analysis.html#cb25-3"></a>master_wells &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="dt">file =</span> <span class="st">&#39;Data/master_wells.csv&#39;</span>)</span>
+<span id="cb25-4"><a href="analysis.html#cb25-4"></a>test_wells &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="dt">file =</span> <span class="st">&#39;Data/test_wells.csv&#39;</span>)</span>
+<span id="cb25-5"><a href="analysis.html#cb25-5"></a>test_ts_3mon &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="dt">file =</span> <span class="st">&#39;Data/test_ts_3mon.csv&#39;</span>)</span>
+<span id="cb25-6"><a href="analysis.html#cb25-6"></a></span>
+<span id="cb25-7"><a href="analysis.html#cb25-7"></a><span class="co"># Set date column as date</span></span>
+<span id="cb25-8"><a href="analysis.html#cb25-8"></a>test_ts_3mon[,<span class="st">&quot;date&quot;</span>] &lt;-<span class="st"> </span><span class="kw">as.Date</span>(test_ts_3mon[,<span class="st">&quot;date&quot;</span>])</span></code></pre></div>
+<p>Next, we will loop through each well and each year and perform the IDW interpolation. We will use the idw function to do this. But first, we need to create a list of the dates on which we are going to interpolate.</p>
+<p>Using these dates, we will loop through each well at each date and perform the idw calculation, using the values from the adjacent wells.</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="analysis.html#cb26-1"></a><span class="kw">library</span>(sp)</span>
+<span id="cb26-2"><a href="analysis.html#cb26-2"></a><span class="kw">library</span>(gstat)</span>
+<span id="cb26-3"><a href="analysis.html#cb26-3"></a><span class="kw">library</span>(dplyr)</span>
+<span id="cb26-4"><a href="analysis.html#cb26-4"></a><span class="co"># Loop through and perform the IDW calculation for each well at each time step</span></span>
+<span id="cb26-5"><a href="analysis.html#cb26-5"></a>interp_values &lt;-<span class="st"> </span><span class="kw">as.data.frame</span>(<span class="kw">c</span>())</span>
+<span id="cb26-6"><a href="analysis.html#cb26-6"></a><span class="cf">for</span> (well <span class="cf">in</span> test_wells<span class="op">$</span>mergeOn){</span>
+<span id="cb26-7"><a href="analysis.html#cb26-7"></a>  <span class="cf">for</span> (dt <span class="cf">in</span> dates){</span>
+<span id="cb26-8"><a href="analysis.html#cb26-8"></a>    sample &lt;-<span class="st"> </span>test_ts_3mon <span class="op">%&gt;%</span></span>
+<span id="cb26-9"><a href="analysis.html#cb26-9"></a><span class="st">      </span><span class="kw">filter</span>(mergeOn <span class="op">!=</span><span class="st"> </span>well) <span class="op">%&gt;%</span></span>
+<span id="cb26-10"><a href="analysis.html#cb26-10"></a><span class="st">      </span><span class="kw">filter</span>(date <span class="op">==</span><span class="st"> </span>dt) <span class="op">%&gt;%</span></span>
+<span id="cb26-11"><a href="analysis.html#cb26-11"></a><span class="st">      </span><span class="kw">select</span>(<span class="op">-</span>lat, <span class="op">-</span>lon, <span class="op">-</span>Elev) <span class="op">%&gt;%</span></span>
+<span id="cb26-12"><a href="analysis.html#cb26-12"></a><span class="st">      </span><span class="kw">merge</span>(test_wells, <span class="dt">by =</span> <span class="st">&quot;mergeOn&quot;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb26-13"><a href="analysis.html#cb26-13"></a><span class="st">      </span><span class="kw">select</span>(mergeOn, date, lat, lon, Elev, Mean_depth, WTE)</span>
+<span id="cb26-14"><a href="analysis.html#cb26-14"></a>    <span class="kw">coordinates</span>(sample) =<span class="st"> </span><span class="er">~</span>lon<span class="op">+</span>lat</span>
+<span id="cb26-15"><a href="analysis.html#cb26-15"></a>    <span class="kw">proj4string</span>(sample) &lt;-<span class="st"> </span><span class="kw">CRS</span>(<span class="st">&quot;+proj=longlat +datum=WGS84&quot;</span>)</span>
+<span id="cb26-16"><a href="analysis.html#cb26-16"></a>    poi &lt;-<span class="st"> </span><span class="kw">data.frame</span>(</span>
+<span id="cb26-17"><a href="analysis.html#cb26-17"></a>      <span class="dt">lon_poi =</span> <span class="kw">filter</span>(test_wells, mergeOn <span class="op">==</span><span class="st"> </span>well)<span class="op">$</span>lon, </span>
+<span id="cb26-18"><a href="analysis.html#cb26-18"></a>      <span class="dt">lat_poi =</span> <span class="kw">filter</span>(test_wells, mergeOn <span class="op">==</span><span class="st"> </span>well)<span class="op">$</span>lat)</span>
+<span id="cb26-19"><a href="analysis.html#cb26-19"></a>    <span class="kw">coordinates</span>(poi)  &lt;-<span class="st"> </span><span class="er">~</span><span class="st"> </span>lon_poi <span class="op">+</span><span class="st"> </span>lat_poi</span>
+<span id="cb26-20"><a href="analysis.html#cb26-20"></a>    <span class="kw">proj4string</span>(poi) &lt;-<span class="st"> </span><span class="kw">CRS</span>(<span class="st">&quot;+proj=longlat +datum=WGS84&quot;</span>)</span>
+<span id="cb26-21"><a href="analysis.html#cb26-21"></a>    new &lt;-<span class="st"> </span><span class="kw">idw</span>(<span class="dt">formula=</span>WTE <span class="op">~</span><span class="st"> </span><span class="dv">1</span>, <span class="dt">locations =</span> sample, <span class="dt">newdata =</span> poi, <span class="dt">idp =</span> <span class="fl">2.0</span>)</span>
+<span id="cb26-22"><a href="analysis.html#cb26-22"></a>    interp_values &lt;-<span class="st"> </span><span class="kw">rbind</span>(interp_values, <span class="kw">c</span>(well, dt, new<span class="op">@</span>data<span class="op">$</span>var1.pred))</span>
+<span id="cb26-23"><a href="analysis.html#cb26-23"></a>  }</span>
+<span id="cb26-24"><a href="analysis.html#cb26-24"></a>}</span></code></pre></div>
 <pre><code>## [inverse distance weighted interpolation]
 ## [inverse distance weighted interpolation]
 ## [inverse distance weighted interpolation]
@@ -271,13 +419,144 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## [inverse distance weighted interpolation]
 ## [inverse distance weighted interpolation]
 ## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
+## [inverse distance weighted interpolation]
 ## [inverse distance weighted interpolation]</code></pre>
-<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="analysis.html#cb17-1"></a><span class="kw">colnames</span>(interp_values) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;mergeOn&quot;</span>, <span class="st">&quot;year&quot;</span>, <span class="st">&quot;value&quot;</span>)</span></code></pre></div>
-<p>As you can see, I have not finished this project. However, you can probably guess the ending: I compare the errors from both methods and make conclusions about how effective IDW is. Any feedback you have is appreciated.</p>
+<p>Now we can clean up the dataframe a bit and create 2 new datasets that contain both interpolated vales and observed values. One will contain data from the well of interest, well 29N03W18M001M. The other will contain the observed and IDW values for all wells.</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="analysis.html#cb28-1"></a><span class="co"># Rename the columns and set to proper data types</span></span>
+<span id="cb28-2"><a href="analysis.html#cb28-2"></a><span class="kw">colnames</span>(interp_values) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;mergeOn&quot;</span>, <span class="st">&quot;date&quot;</span>, <span class="st">&quot;WTE_IDW&quot;</span>)</span>
+<span id="cb28-3"><a href="analysis.html#cb28-3"></a>interp_values<span class="op">$</span>date &lt;-<span class="st"> </span><span class="kw">as.Date</span>(interp_values<span class="op">$</span>date)</span>
+<span id="cb28-4"><a href="analysis.html#cb28-4"></a>interp_values<span class="op">$</span>WTE_IDW &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(interp_values<span class="op">$</span>WTE_IDW)</span>
+<span id="cb28-5"><a href="analysis.html#cb28-5"></a></span>
+<span id="cb28-6"><a href="analysis.html#cb28-6"></a><span class="co"># Create 2 new datasets that combine observed values with IDW values</span></span>
+<span id="cb28-7"><a href="analysis.html#cb28-7"></a>comp_data_single_IDW &lt;-<span class="st"> </span><span class="kw">merge</span>(interp_values,test_ts_3mon,<span class="dt">by=</span><span class="kw">c</span>(<span class="st">&quot;mergeOn&quot;</span>,<span class="st">&quot;date&quot;</span>))</span>
+<span id="cb28-8"><a href="analysis.html#cb28-8"></a>comp_data_all_IDW &lt;-<span class="st"> </span>test_ts_3mon <span class="op">%&gt;%</span></span>
+<span id="cb28-9"><a href="analysis.html#cb28-9"></a><span class="st">  </span><span class="kw">filter</span>(mergeOn <span class="op">==</span><span class="st"> </span>well) <span class="op">%&gt;%</span></span>
+<span id="cb28-10"><a href="analysis.html#cb28-10"></a><span class="st">  </span><span class="kw">left_join</span>(interp_values,<span class="dt">by=</span><span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;mergeOn&quot;</span>))</span></code></pre></div>
+<p>Finally, we will plot the IDW interpolated values. First, we will look at a single well, #29N03W18M001M. We will superimpose the IDW values over the entire observed time series for the well. We will do this using the GGPlot2 package again.</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="analysis.html#cb29-1"></a><span class="co"># Rename the columns and set to proper data types</span></span>
+<span id="cb29-2"><a href="analysis.html#cb29-2"></a><span class="co"># Plot all observed values vs. the IDW values for Well 29N03W18M001M</span></span>
+<span id="cb29-3"><a href="analysis.html#cb29-3"></a><span class="kw">library</span>(ggplot2)</span>
+<span id="cb29-4"><a href="analysis.html#cb29-4"></a>comp_data_single_IDW <span class="op">%&gt;%</span></span>
+<span id="cb29-5"><a href="analysis.html#cb29-5"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> date)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb29-6"><a href="analysis.html#cb29-6"></a><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">y =</span> WTE, <span class="dt">color =</span> <span class="st">&quot;steelblue&quot;</span>)) <span class="op">+</span></span>
+<span id="cb29-7"><a href="analysis.html#cb29-7"></a><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">y =</span> WTE_IDW, <span class="dt">color =</span> <span class="st">&quot;orange&quot;</span>)) <span class="op">+</span></span>
+<span id="cb29-8"><a href="analysis.html#cb29-8"></a><span class="st">  </span><span class="kw">scale_color_discrete</span>(<span class="dt">name =</span> <span class="st">&quot;&quot;</span>, <span class="dt">labels =</span> <span class="kw">c</span>(<span class="st">&quot;IDW Data&quot;</span>, <span class="st">&quot;Observed Data&quot;</span>)) <span class="op">+</span></span>
+<span id="cb29-9"><a href="analysis.html#cb29-9"></a><span class="st">  </span><span class="kw">xlab</span>(<span class="st">&quot;Date&quot;</span>) <span class="op">+</span></span>
+<span id="cb29-10"><a href="analysis.html#cb29-10"></a><span class="st">  </span><span class="kw">ylab</span>(<span class="st">&quot;Water Table Elevation (ft above sea level)&quot;</span>) <span class="op">+</span></span>
+<span id="cb29-11"><a href="analysis.html#cb29-11"></a><span class="st">  </span><span class="kw">ggtitle</span>(well) <span class="op">+</span></span>
+<span id="cb29-12"><a href="analysis.html#cb29-12"></a><span class="st">  </span><span class="kw">theme</span>(<span class="dt">plot.title =</span> <span class="kw">element_text</span>(<span class="dt">hjust =</span> <span class="fl">0.5</span>), <span class="dt">legend.position =</span> <span class="st">&quot;bottom&quot;</span>)</span></code></pre></div>
+<p><img src="Website_Bookdown_files/figure-html/unnamed-chunk-20-1.png" width="672" /></p>
+<p>Finally, we will create a mosaic of time series data showing each well’s IDW values superimposed over the observed values for the interpolation period.</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="analysis.html#cb30-1"></a><span class="co"># Plot 2012-2015 observed values vs. the IDW values</span></span>
+<span id="cb30-2"><a href="analysis.html#cb30-2"></a>comp_data_all_IDW <span class="op">%&gt;%</span></span>
+<span id="cb30-3"><a href="analysis.html#cb30-3"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> date)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb30-4"><a href="analysis.html#cb30-4"></a><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">y =</span> WTE, <span class="dt">color =</span> <span class="st">&quot;steelblue&quot;</span>)) <span class="op">+</span></span>
+<span id="cb30-5"><a href="analysis.html#cb30-5"></a><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">y =</span> WTE_IDW, <span class="dt">color =</span> <span class="st">&quot;orange&quot;</span>)) <span class="op">+</span></span>
+<span id="cb30-6"><a href="analysis.html#cb30-6"></a><span class="st">  </span><span class="kw">scale_color_discrete</span>(<span class="dt">name =</span> <span class="st">&quot;&quot;</span>, <span class="dt">labels =</span> <span class="kw">c</span>(<span class="st">&quot;IDW Data&quot;</span>, <span class="st">&quot;Observed Data&quot;</span>)) <span class="op">+</span></span>
+<span id="cb30-7"><a href="analysis.html#cb30-7"></a><span class="st">  </span><span class="kw">xlab</span>(<span class="st">&quot;Date&quot;</span>) <span class="op">+</span></span>
+<span id="cb30-8"><a href="analysis.html#cb30-8"></a><span class="st">  </span><span class="kw">ylab</span>(<span class="st">&quot;Water Table Elevation (ft above sea level)&quot;</span>) <span class="op">+</span></span>
+<span id="cb30-9"><a href="analysis.html#cb30-9"></a><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;All Well Time Series: IDW vs. Observed&quot;</span>) <span class="op">+</span></span>
+<span id="cb30-10"><a href="analysis.html#cb30-10"></a><span class="st">  </span><span class="kw">theme</span>(<span class="dt">plot.title =</span> <span class="kw">element_text</span>(<span class="dt">hjust =</span> <span class="fl">0.5</span>), <span class="dt">legend.position =</span> <span class="st">&quot;bottom&quot;</span>) <span class="op">+</span></span>
+<span id="cb30-11"><a href="analysis.html#cb30-11"></a><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>mergeOn)</span></code></pre></div>
+<p><img src="Website_Bookdown_files/figure-html/unnamed-chunk-21-1.png" width="672" />
+In the next section, we will explore the accuracy via error norms for these results.</p>
 </div>
-<div id="example-three" class="section level2">
-<h2><span class="header-section-number">5.3</span> Example three</h2>
+<div id="error-comparison" class="section level2">
+<h2><span class="header-section-number">5.3</span> Error Comparison</h2>
+<p>The IDW method appears to be fairly accurate, with trends similar to the observed data. However, the magnitude of values are sometimes significantly different. It should again be noted that elevations (which were required to calculate water table elevations) were obtained manually using Google Earth. In addition, the lat/long coordinates for each well were not provided with sufficient resolution to have high confidence in any elevation measurement. Therefore, the water table elevations are subject to error.</p>
+<p>A table of error metrics can be calculated using the library <strong>Metrics.</strong> A root mean square error (RMSE) and an r-squared (R^2) error will be calculated for each well. The table will then be formatted for easy viewing.</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="analysis.html#cb31-1"></a><span class="co"># Calculate a set of error metrics for each well&#39;s data</span></span>
+<span id="cb31-2"><a href="analysis.html#cb31-2"></a><span class="kw">library</span>(Metrics)</span>
+<span id="cb31-3"><a href="analysis.html#cb31-3"></a>error_metrics_summary &lt;-<span class="st"> </span><span class="kw">data.frame</span>()</span>
+<span id="cb31-4"><a href="analysis.html#cb31-4"></a><span class="cf">for</span> (well <span class="cf">in</span> test_wells<span class="op">$</span>mergeOn) {</span>
+<span id="cb31-5"><a href="analysis.html#cb31-5"></a>  comp_data_well &lt;-<span class="st"> </span>comp_data_all_IDW <span class="op">%&gt;%</span></span>
+<span id="cb31-6"><a href="analysis.html#cb31-6"></a><span class="st">    </span><span class="kw">filter</span>(mergeOn <span class="op">==</span><span class="st"> </span>well)</span>
+<span id="cb31-7"><a href="analysis.html#cb31-7"></a>  rmse_error &lt;-<span class="kw">rmse</span>(comp_data_well<span class="op">$</span>WTE, comp_data_well<span class="op">$</span>WTE_IDW)</span>
+<span id="cb31-8"><a href="analysis.html#cb31-8"></a>  rsq &lt;-<span class="st"> </span><span class="kw">cor</span>(comp_data_well<span class="op">$</span>WTE, comp_data_well<span class="op">$</span>WTE_IDW)<span class="op">^</span><span class="dv">2</span></span>
+<span id="cb31-9"><a href="analysis.html#cb31-9"></a>  error_metrics_summary &lt;-<span class="st"> </span><span class="kw">rbind</span>(error_metrics_summary, <span class="kw">c</span>(well, rmse_error, rsq))</span>
+<span id="cb31-10"><a href="analysis.html#cb31-10"></a>}</span>
+<span id="cb31-11"><a href="analysis.html#cb31-11"></a><span class="kw">colnames</span>(error_metrics_summary) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Well ID&quot;</span>, <span class="st">&quot;RMSE&quot;</span>, <span class="st">&quot;R^2&quot;</span>)</span>
+<span id="cb31-12"><a href="analysis.html#cb31-12"></a>error_metrics_summary<span class="op">$</span>RMSE &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(error_metrics_summary<span class="op">$</span>RMSE)</span>
+<span id="cb31-13"><a href="analysis.html#cb31-13"></a>error_metrics_summary<span class="op">$</span><span class="st">&#39;R^2&#39;</span> &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(error_metrics_summary<span class="op">$</span><span class="st">&#39;R^2&#39;</span>)</span>
+<span id="cb31-14"><a href="analysis.html#cb31-14"></a>error_metrics_summary[,<span class="op">-</span><span class="dv">1</span>] &lt;-<span class="kw">round</span>(error_metrics_summary[,<span class="op">-</span><span class="dv">1</span>],<span class="dv">3</span>)</span>
+<span id="cb31-15"><a href="analysis.html#cb31-15"></a>error_metrics_summary</span></code></pre></div>
+<pre><code>##         Well ID RMSE R^2
+## 1 24N02W03B001M  NaN  NA
+## 2 24N02W24D003M  NaN  NA
+## 3 24N02W29N004M  NaN  NA
+## 4 25N03W11B003M  NaN  NA
+## 5 29N03W18M001M   NA  NA</code></pre>
+<p>Wells 25N03W11B003M and 29N03W18M001M appear to have values that are closest to their observed values. However, wells 24N02W24D003M and 25N03W11B003M appear to have the best “fit” to their observed values.</p>
+<p>This concludes the chapter on data imputation methods. The final chapter will summarize the paper and discuss future work.</p>
 
+</div>
+</div>
+<h3>References</h3>
+<div id="refs" class="references">
+<div id="ref-PDSI">
+<p>Dai, K. E. Trenberth, A., and T. Qian. n.d. “A Global Data Set of Palmer Drought Severity Index for 1870-2002: Relationship with Soil Moisture and Effects of Surface Warming.” <a href="https://psl.noaa.gov/data/gridded/data.pdsi.html">https://psl.noaa.gov/data/gridded/data.pdsi.html</a>.</p>
+</div>
+<div id="ref-Evans-2019">
+<p>Evans, Williams, S. 2020. “Exploiting Earth Observation Data to Impute Groundwater Level Measurements with an Extreme Learning Machine.” <em>Remote Sensing</em> 12: 2044. <a href="https://doi.org/10.3390/rs12122044">https://doi.org/10.3390/rs12122044</a>.</p>
 </div>
 </div>
             </section>
