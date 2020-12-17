@@ -148,7 +148,7 @@ test_ts_3mon[,"date"] <- as.Date(test_ts_3mon[,"date"])
 ```
 
 Next, we will loop through each well and each year and perform the IDW interpolation. We will use the idw function to do this. But first, we need to create a list of the dates on which we are going to interpolate.
-```{r, echo=FALSE, results=FALSE}
+```{r, results=FALSE}
 # Create the dates list that we want to interpolate
 dates <- c("2012-01-01", "2012-04-01", "2012-07-01", "2012-10-01", 
            "2013-01-01", "2013-04-01", "2013-07-01", "2013-10-01",
@@ -156,7 +156,7 @@ dates <- c("2012-01-01", "2012-04-01", "2012-07-01", "2012-10-01",
            "2015-01-01", "2015-04-01", "2015-07-01", "2015-10-01")
 ```
 Using these dates, we will loop through each well at each date and perform the idw calculation, using the values from the adjacent wells.
-```{r, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r eval=FALSE, message=FALSE, warning=FALSE, results=FALSE}
 library(sp)
 library(gstat)
 library(dplyr)
@@ -182,8 +182,36 @@ for (well in test_wells$mergeOn){
   }
 }
 
-```
 
+```
+```{r message=FALSE, warning=FALSE, include=FALSE, results=FALSE}
+library(sp)
+library(gstat)
+library(dplyr)
+# Loop through and perform the IDW calculation for each well at each time step
+interp_values <- as.data.frame(c())
+for (well in test_wells$mergeOn){
+  for (dt in dates){
+    sample <- test_ts_3mon %>%
+      filter(mergeOn != well) %>%
+      filter(date == dt) %>%
+      select(-lat, -lon, -Elev) %>%
+      merge(test_wells, by = "mergeOn") %>%
+      select(mergeOn, date, lat, lon, Elev, Mean_depth, WTE)
+    coordinates(sample) = ~lon+lat
+    proj4string(sample) <- CRS("+proj=longlat +datum=WGS84")
+    poi <- data.frame(
+      lon_poi = filter(test_wells, mergeOn == well)$lon, 
+      lat_poi = filter(test_wells, mergeOn == well)$lat)
+    coordinates(poi)  <- ~ lon_poi + lat_poi
+    proj4string(poi) <- CRS("+proj=longlat +datum=WGS84")
+    new <- idw(formula=WTE ~ 1, locations = sample, newdata = poi, idp = 2.0)
+    interp_values <- rbind(interp_values, c(well, dt, new@data$var1.pred))
+  }
+}
+
+
+```
 Now we can clean up the dataframe a bit and create 2 new datasets that contain both interpolated vales and observed values. One will contain data from the well of interest, well 29N03W18M001M. The other will contain the observed and IDW values for all wells.
 ```{r, message=FALSE, warning=FALSE}
 colnames(interp_values) <- c("mergeOn", "date", "WTE_IDW")
