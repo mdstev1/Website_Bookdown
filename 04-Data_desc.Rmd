@@ -6,7 +6,7 @@ As described in the last section, the data used in this project comes from a rec
 
 First, we can load the dataset and inspect. It contains 9 different variables, including 5 that relate to various identification numbers. There are lat/long variables describing the geographic reference, a depth to groundwater value, and a date at which the depth measurement was taken, as seen in the table below.
 ```{r master_tab, tidy=FALSE}
-load("code/master.Rda")
+load("Data/master.Rda")
 master <- subset(master, select = c("NDI", "mergeOn", "lat", "lon", "date", "depth.to.GW..ft."))
 head(master)
 
@@ -173,3 +173,4 @@ test_wells <- subset(test_wells, select = c(mergeOn,lat,lon,Elev))
 write.csv(test_wells, file = "Data/test_wells.csv")
 ```
 
+This concludes the Data exploration chapter. The next chapter will explore different methods of groundwater level imputation.
