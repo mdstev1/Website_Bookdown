@@ -35,32 +35,35 @@ test_ts_3mon %>%
   theme(plot.title = element_text(hjust = 0.5)) +
   facet_wrap(~mergeOn)
 
+# Create lat/long objects that will be used to obtain the proper pdsi data.
+well_lat <- mean(filter(test_wells, mergeOn == well)$lat)
+well_long <- mean(filter(test_wells, mergeOn == well)$lon)
 
-well_lat <- mean(filter(test_wells, mergeOn != well)$lat)
-well_long <- mean(filter(test_wells, mergeOn != well)$lon)
-
-
+# Store pdsi data in dataframe and print metadata
 library(ncdf4)
-climate_output <- nc_open("pdsi.mon.mean.nc")
-climate_output_sc <- nc_open("pdsi.mon.mean.selfcalibrated.nc")
+climate_output_sc <- nc_open("Data/pdsi.mon.mean.selfcalibrated.nc")
 print(climate_output_sc)
 
+# Obtain the lat,long, and time arrays from the data
 lat <- ncvar_get(climate_output_sc,"lat")
 lon <- ncvar_get(climate_output_sc,"lon")
 time <- ncvar_get(climate_output_sc,"time")
-tail(time)
-tunits <- ncatt_get(climate_output_sc,"time","units")
-tunits
+# tail(time)
+# tunits <- ncatt_get(climate_output_sc,"time","units")
+# tunits
+
+# Obtain pdsi data and store in array
 pdsi_array <- ncvar_get(climate_output_sc,"pdsi")
 dim(pdsi_array)
-pdsi_array[,,1980]
+head(pdsi_array[,,1980])
+# Find the lat/long coordinates that are closest to the average well_long and well_lat
 ncd_lon <- which(abs(lon-well_long)==min(abs(lon-well_long)))
 lon[ncd_lon]
 ncd_lat <- which(abs(lat-well_lat)==min(abs(lat-well_lat)))
 lat[ncd_lat]
 
 
-# This is just code to demonstrate how to work with the dates in the netCDF
+# This is code to demonstrate how to work with the dates in the netCDF
 st_date <- as.Date("1800-01-01")
 date <- as.Date("2012-01-01")
 date_diff <- as.numeric((date-st_date)*24)
@@ -82,8 +85,7 @@ W1 <- matrix(rnorm(1*500), 1, 500)
 #b=np.random.normal(size=[h])
 b <- rnorm(500)
 
-# generate the A matrix (Eq 6)
-#a=np.dot(X,W1)+b 
+# Create a time series of the PDSI data for the selected lat/long
 ncdf_ts <- pdsi_array[ncd_lon,ncd_lat,]
 ncdf_ts <- mutate(as.data.frame(ncdf_ts), PDSI = ncdf_ts, date = time, .keep = "none")
 ncdf_ts$date <- as.Date(ncdf_ts$date/24, origin = "1800-01-01")
@@ -94,12 +96,12 @@ X <- ncdf_ts %>%
   mutate(date = lubridate::floor_date(date, "3 months")) %>%
   group_by(date) %>%
   summarize(PDSI=mean(PDSI)) %>%
-  subset(date %in% test_ts_3mon$date)
+  subset(date %in% w3mon_ts$date)
 Y <- subset(w3mon_ts, date %in% X$date)
-X <- subset(X, date %in% Y$date)
 Y <- Y$Mean_depth
 
-
+# generate the A matrix (Eq 6)
+#a=np.dot(X,W1)+b 
 # Dot product
 a <- (X$PDSI %*% W1)
 ab <- a + rep(b, each = nrow(a))

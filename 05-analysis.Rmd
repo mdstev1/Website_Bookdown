@@ -6,7 +6,7 @@ In order to determine accuracy, three years (2012-2015) of data will be imputed 
 
 ## Extreme Learning Machine
 
-As described previously, the ELM method forms a relationship between input data sources (in our case, remotely sensed earth observation data) and observed data. This relationship is then used to impute data for time periods without measurements.
+As described previously, the ELM method forms a relationship between input data sources (in our case, remotely sensed earth observation data) and observed data. This relationship is then used to impute data for time periods without measurements. @Evans-2019 demonstrated this method in Python with promising results. Unfortunately, due to time constraints and knowledge constraints, the conversion from Python to R was not completed in this paper. The full scope of this undertaking was not evident to the author at the outset (it should be noted that @Evans-2019 shared psuedocode in their paper; the full process is much more involved). However, in future work, we hope to be able to solve this method in R. This section will merely set up the data and methods that future work can build upon.
 
 First, we will need to create a time series data frame that contains all the measurements from each well.
 ```{r message=FALSE}
@@ -14,7 +14,7 @@ load("Data/master.Rda")
 master_wells <- read.csv(file = 'Data/master_wells.csv')
 test_wells <- read.csv(file = 'Data/test_wells.csv')
 ```
-
+In order to prepare the data for analysis, the data must be summarized to uniformly spaced time steps. We will summarize this dataset to 3 month (quarterly) averages. In order to interpolate, water table elevations must be generated, rather than simple depth to groundwater measurements. This is because different depths may extend to the same water table elevation, depending on the ground elevation. This is less important for the ELM method, but becomes very important in spatial interpolation, discussed in the next section.
 ```{r}
 # Create dataset with all well data in 3 month increments
 test_ts_3mon <- data.frame(c())
@@ -33,18 +33,100 @@ test_ts_3mon <- subset(test_ts_3mon, select = -c(X))
 write.csv(test_ts_3mon, file = "Data/test_ts_3mon.csv")
 ```
 
-We can also create a facet-wrapped group of time series graphs for each well.
+Now, we will create a facet-wrapped group of time series graphs for each well using the quarterly averages that we just created.
 ```{r}
 # Now let's create time series graphs of these quarterly means
 test_ts_3mon %>%
   ggplot(aes(x = date, y = WTE)) + 
   geom_line(color = "blue") +
   xlab("Date") +
-  ylab("Water Table Elevation (ft)") +
+  ylab("Water Table Elevation (ft above sea level)") +
   ggtitle("Quarterly Time Series for Each well") +
   theme(plot.title = element_text(hjust = 0.5)) +
   facet_wrap(~mergeOn)
 ```
+Next, we will load in some remotely sensed earth observation data, the Palmer Drought Severity Index (PDSI). The PDSI is one of the measures that we can correlate groundwater levels with. For the sake of this demonstration, we will only use the PDSI. But for accurate results, multiple earth observation datasets would need to be used. 
+
+The PDSI data is hosted by the National Oceanic and Atmospheric Administration's (NOAA) Physical Sciences Laboratory (@PDSI). It spans from 1850 to 2014. There is a normal dataset and a "self-calibrated" dataset; we will use the latter because it has more recent data (it spans up through 2014, whereas the normal dataset spans up through 2005). It is stored in a netcdf file, which means we will need to utilize the ncdf4 library.
+
+We will start by opening the data file and store it in a data object. We will then print the metadata and inspect.
+```{r}
+# Store pdsi data in dataframe and print metadata
+library(ncdf4)
+climate_output_sc <- nc_open("Data/pdsi.mon.mean.selfcalibrated.nc")
+print(climate_output_sc)
+```
+We have printed the metadata for the file. The important takeaway is that there are three different variables - latitude, longitude, and time - over which the PDSI data spans across. This is why it was stored in a netCDF file format.
+
+We will store each of these variables in arrays. We will also store the PDSI values in an array and extract the values that we need based on the lat/long/time variables. We will start by obtaining an average latitude and longitude from our test_wells dataset. This will be used to extract only the data we need from the pdsi dataset. Then the arrays can be created.
+```{r, message=FALSE, warning=FALSE}
+
+# Create lat/long objects that will be used to obtain the pdsi data for the study area
+well_lat <- mean(filter(test_wells, mergeOn == well)$lat)
+well_long <- mean(filter(test_wells, mergeOn == well)$lon)
+
+# Obtain the lat,long, and time arrays from the data
+lat <- ncvar_get(climate_output_sc,"lat")
+lon <- ncvar_get(climate_output_sc,"lon")
+time <- ncvar_get(climate_output_sc,"time")
+```
+```{r}
+# Obtain pdsi data and store in array
+pdsi_array <- ncvar_get(climate_output_sc,"pdsi")
+dim(pdsi_array)
+
+# Find the lat/long coordinates that are closest to the average well_long and well_lat
+ncd_lon <- which(abs(lon-well_long)==min(abs(lon-well_long)))
+ncd_lat <- which(abs(lat-well_lat)==min(abs(lat-well_lat)))
+#Print them
+cat("Lat:", lat[ncd_lat], ", Long:", lon[ncd_lon])
+```
+Now that the data is set up, we will explore - briefly - the process for ELM. As this analysis has not been performed successfully in R, we will not spend an inordinate amount of time on it, except to introduce the concept. The detailed explanation can be found in the study performed by @Evans-2019 and all clarification should be directed to that paper. This report merely sets up the process.
+
+First, we generate a set of random input weights. These will have a normal distribution and will create a 1 x 500 matrix. Next, the bias vector is generated with 500 randomized values (creating a 500 x 1 matrix). Then, we will extract a time series for the study area, which is the lat/long coordinate in the PDSI array that is closest to the well. The well we will be using is Well #29N03W18M001M.
+
+```{r}
+# generate random input weights, W1
+W1 <- matrix(rnorm(1*500), 1, 500) 
+
+# generate bias vector, b
+b <- rnorm(500)
+
+# Create a time series of the PDSI data for the selected lat/long
+ncdf_ts <- pdsi_array[ncd_lon,ncd_lat,]
+ncdf_ts <- mutate(as.data.frame(ncdf_ts), PDSI = ncdf_ts, date = time, .keep = "none")
+ncdf_ts$date <- as.Date(ncdf_ts$date/24, origin = "1800-01-01")
+tail(ncdf_ts)
+```
+As we can see, the PDSI values show up and correlate to monthly time steps. To simplify the analysis and eliminate noise, we will resample the data to three-month intervals. We will also clip the data to the time period that we have observed groundwater level data for.
+```{r, message=FALSE, warning=FALSE}
+# Create a ts dataframe of the PDSI data with 3 month averages and a time frame lining up with the well data
+X <- c()
+X <- ncdf_ts %>%
+  mutate(date = lubridate::floor_date(date, "3 months")) %>%
+  group_by(date) %>%
+  summarize(PDSI=mean(PDSI)) %>%
+  subset(date %in% w3mon_ts$date)
+```
+Now we can create the A Matrix. This matrix is used to determine the weights for the observed data correlation.
+
+```{r, message=FALSE, warning=FALSE}
+# generate the A matrix
+a <- (X$PDSI %*% W1)
+ab <- a + rep(b, each = nrow(a))
+
+# basis function (theta) sets negative values to zero
+A <- pmax(ab, 0)
+```
+
+The last thing we will do in this analysis is to generate the identity matrix. We will also apply a weight, lambda, to the identity matrix.
+
+```{r, message=FALSE, warning=FALSE}
+I = diag(1)
+lamb = 100
+lamb_I <- lamb*I
+```
+This concludes the set up for the ELM method. Next, we will discuss a spatial interpolation method, IDW, which will provide a comparison tool for the ELM. In future works, we will complete this analysis of ELM. 
 
 ## Inverse Distance Weighting
 
