@@ -1,7 +1,7 @@
-#IDW
-library(gstat)
-library(sp)
+# library(gstat)
+# library(sp)
 library(Metrics)
+library(dplyr)
 
 # Load the datasets created previously
 load("master.Rda")
@@ -11,7 +11,6 @@ test_ts_3mon <- read.csv(file = 'test_ts_3mon.csv')
 
 # Extract the year from the date column
 test_ts_3mon[,"date"] <- as.Date(test_ts_3mon[,"date"])
-test_ts_3mon[,"year"] <- format(test_ts_3mon[,"date"], "%Y")
 
 # Create the dates list that we want to interpolate
 dates <- c("2012-01-01", "2012-04-01", "2012-07-01", "2012-10-01", 
@@ -19,8 +18,9 @@ dates <- c("2012-01-01", "2012-04-01", "2012-07-01", "2012-10-01",
            "2014-01-01", "2014-04-01", "2014-07-01", "2014-10-01",
            "2015-01-01", "2015-04-01", "2015-07-01", "2015-10-01")
 
-interp_values <- as.data.frame(c())
+library(dplyr)
 # Loop through and perform the IDW calculation for each well at each time step
+interp_values <- as.data.frame(c())
 for (well in test_wells$mergeOn){
   for (dt in dates){
     sample <- test_ts_3mon %>%
@@ -28,7 +28,7 @@ for (well in test_wells$mergeOn){
       filter(date == dt) %>%
       select(-lat, -lon, -Elev) %>%
       merge(test_wells, by = "mergeOn") %>%
-      select(mergeOn, date, lat, lon, year, Elev, Mean_depth, WTE)
+      select(mergeOn, date, lat, lon, Elev, Mean_depth, WTE)
     coordinates(sample) = ~lon+lat
     proj4string(sample) <- CRS("+proj=longlat +datum=WGS84")
     poi <- data.frame(
@@ -53,6 +53,7 @@ comp_data_experiment <- test_ts_3mon %>%
   left_join(interp_values,by=c("date", "mergeOn"))
 
 # Plot all observed values vs. the IDW values for Well 29N03W18M001M
+library(ggplot2)
 comp_data_experiment %>%
   ggplot(aes(x = date)) + 
   geom_line(aes(y = WTE, color = "steelblue")) +
@@ -75,16 +76,22 @@ comp_data %>%
   theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom") +
   facet_wrap(~mergeOn)
 
-
-error_metrics_summary <- data.frame(Well=character(), RMSE=numeric())
+# Calculate a set of error metrics for each well's data
+library(Metrics)
+error_metrics_summary <- data.frame()
 for (well in test_wells$mergeOn) {
   comp_data_well <- comp_data %>%
     filter(mergeOn == well)
   rmse_error <-rmse(comp_data_well$WTE, comp_data_well$WTE_IDW)
-  error_metrics_summary <- rbind(error_metrics_summary, c(well, rmse_error))
+  rsq <- cor(comp_data_well$WTE, comp_data_well$WTE_IDW)^2
+  error_metrics_summary <- rbind(error_metrics_summary, c(well, rmse_error, rsq))
 }
-names(error_metrics_summary)[1] <- "Well ID"
-names(error_metrics_summary)[2] <- "RMSE"
+colnames(error_metrics_summary) <- c("Well ID", "RMSE", "R^2")
+error_metrics_summary$RMSE <- as.numeric(error_metrics_summary$RMSE)
+error_metrics_summary$'R^2' <- as.numeric(error_metrics_summary$'R^2')
+error_metrics_summary[,-1] <-round(error_metrics_summary[,-1],3)
+View(error_metrics_summary)
+
 
 # yr=2012
 # dt="2012-10-01"
