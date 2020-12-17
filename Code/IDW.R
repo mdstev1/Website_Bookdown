@@ -9,7 +9,7 @@ master_wells <- read.csv(file = 'master_wells.csv')
 test_wells <- read.csv(file = 'test_wells.csv')
 test_ts_3mon <- read.csv(file = 'test_ts_3mon.csv')
 
-# Extract the year from the date column
+# Set date column as date
 test_ts_3mon[,"date"] <- as.Date(test_ts_3mon[,"date"])
 
 # Create the dates list that we want to interpolate
@@ -46,15 +46,15 @@ colnames(interp_values) <- c("mergeOn", "date", "WTE_IDW")
 interp_values$date <- as.Date(interp_values$date)
 interp_values$WTE_IDW <- as.numeric(interp_values$WTE_IDW)
 
-# Create new dataset that combines observed values with IDW values
-comp_data <- merge(interp_values,test_ts_3mon,by=c("mergeOn","date"))
-comp_data_experiment <- test_ts_3mon %>%
+# Create 2 new datasets that combine observed values with IDW values
+comp_data_all_IDW <- merge(interp_values,test_ts_3mon,by=c("mergeOn","date"))
+comp_data_single_IDW <- test_ts_3mon %>%
   filter(mergeOn == well) %>%
   left_join(interp_values,by=c("date", "mergeOn"))
 
 # Plot all observed values vs. the IDW values for Well 29N03W18M001M
 library(ggplot2)
-comp_data_experiment %>%
+comp_data_single_IDW %>%
   ggplot(aes(x = date)) + 
   geom_line(aes(y = WTE, color = "steelblue")) +
   geom_line(aes(y = WTE_IDW, color = "orange")) +
@@ -65,7 +65,7 @@ comp_data_experiment %>%
   theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 
 # Plot 2012-2015 observed values vs. the IDW values
-comp_data %>%
+comp_data_all_IDW %>%
   ggplot(aes(x = date)) + 
   geom_line(aes(y = WTE, color = "steelblue")) +
   geom_line(aes(y = WTE_IDW, color = "orange")) +
@@ -80,7 +80,7 @@ comp_data %>%
 library(Metrics)
 error_metrics_summary <- data.frame()
 for (well in test_wells$mergeOn) {
-  comp_data_well <- comp_data %>%
+  comp_data_well <- comp_data_all_IDW %>%
     filter(mergeOn == well)
   rmse_error <-rmse(comp_data_well$WTE, comp_data_well$WTE_IDW)
   rsq <- cor(comp_data_well$WTE, comp_data_well$WTE_IDW)^2

@@ -1,0 +1,256 @@
+--- 
+title: "An Analysis of Groundwater Levels in the Central Valley of California"
+author: "Michael Stevens"
+date: "`r Sys.Date()`"
+site: bookdown::bookdown_site
+documentclass: book
+bibliography: [book.bib, packages.bib]
+biblio-style: apalike
+link-citations: yes
+description: "This website will act as a portfolio for my term project. The methodology, analysis, results, and conclusions will be discussed here."
+---
+--- 
+title: "An Analysis of Groundwater Levels in the Central Valley of California"
+author: "Michael Stevens"
+date: "`r Sys.Date()`"
+site: bookdown::bookdown_site
+documentclass: book
+bibliography: [book.bib, packages.bib]
+biblio-style: apalike
+link-citations: yes
+description: "This website will act as a portfolio for my term project. The methodology, analysis, results, and conclusions will be discussed here."
+---
+
+# Abstract
+
+As groundwater is an essential and over-utilized resource in dry climates like the Western United States, responsibly managing this resource becomes crucial for sustainability. In-situ groundwater level data are often inconsistent, which makes temporal analysis difficult. There are many interpolation methods that can be used to fill in gaps in datasets. Evans, Williams, Jones, Ames, and Nelson (2020) demonstrated an effective imputation method for groundwater data, utilizing an Extreme Learning Machine (ELM). This study will explore the effectiveness of this approach in the Central Valley of California, an extremely productive agricultural area facing groundwater depletion challenges. A study compiled by NASA Jet Propulsion Lab (JPL) compiled a robust dataset of in-situ groundwater level data in the Central Valley. This dataset will be analyzed for appropriate test areas and wells to compare the efficacy of the ELM method in this region against the kriging spatial interpolation method.
+
+<!--chapter:end:index.Rmd-->
+
+# Introduction {#intro}
+
+
+A study performed by the NASA Jet Propulsion Laboratory (JPL) compiled data entries from over a million wells in the central valley. From this list, representative wells (with a sufficient amount of measurements) were chosen for 1-km grids across the valley. This dataset includes measurements for the depth to groundwater at each well, measured across varying ranges and intervals of time. 
+
+The data consists of 9 different variable. Five of these variables relate to the identification number of each well. Two variables relate to the spatial location (lat/long coordinates) of each well. The wells are distributed all across the Central Valley of California. The final two variables describe the date that each measurement was taken and the value of the measurement itself. The well data begins around 2001 and ends in 2019. Depth to groundwater varies from well to well, but is generally between 0 and 100 feet.
+
+It will be necessary to retrieve ground surface elevation (GSE) data for each well so that the Water Table Elevation (WTE) can be determined, which is the difference between the GSE and the depth to groundwater.
+
+In this study, these measurements will be trimmed down to a smaller area within the valley that will serve as a test case for our study. The area will be chosen based on the spatial and temporal robustness of its data.
+
+<!--chapter:end:02-intro.Rmd-->
+
+# Literature Review
+
+
+Correctly characterizing groundwater levels and storage in an aquifer can be very difficult without a robust dataset. Often, in-situ data are collected at inconsistent intervals, while wells and monitoring stations are rarely distributed evenly. Because groundwater depends on so many different factors and does not exhibit linear behavior, finding ways to estimate groundwater levels without a complete set of in-situ data becomes a very important task. Some of these methods will be discussed here.  
+
+Many of these methods utilize remote sensing data to analyze groundwater levels. A study performed by @THOMAS2017384 utilizes data from NASA’s Gravity Recovery and Climate Experiment (GRACE) mission to determine changes in groundwater. Satellites measure the changes in Earth’s gravitational field, due to changes in mass distribution, which can measure the redistribution of water. The study normalizes data collected by GRACE to measure changes in groundwater due to drought, which they call the GRACE Groundwater Drought Index (GGDI). Many measures can only account for climatological factors, but the GGDI is able to capture anthropogenic effects as well. This important for groundwater, which is often subjected to increased pumping during droughts. The method demonstrated an effective way to utilize remotely sensed data across a large area to measure groundwater response. However, the authors note that, due to GRACE’s temporal resolution, the GGDI can only be used with confidence to determine droughts after 3 months of indicated drought.  
+
+There are other methods to utilize remotely sensed data to characterize groundwater. @piahs-372-23-2015 used remotely sensed data to track land subsidence during 2007-2014 of over 0.5 m in the San Joaquin Valley (which falls within the Central Valley of California). Land surface depressions were determined using Interferometric Synthetic Aperture Radar (InSAR) and in-situ data from extensometers and Continuous Global Positioning System (CGPS) data. This increase in subsidence coincided with an increase in groundwater pumping, due to drought. These findings agree with a study performed by @Vasco-2019, which analyzed a drop in vertical land surface in the Central Valley during 2015-2018, also observed using InSAR data. Their estimated decrease in groundwater storage in the Tulare basin was similar to other independent estimates, including that of the GRACE mission, another remote sensing data source. This provides reasonable assurances on the accuracy of the method for this area. These findings show promise for the efficacy of using remotely sensed data to measure changes in groundwater levels in the Central Valley.  
+
+Another method for estimating groundwater levels is interpolating measurements based on in-situ data. Since many wells lack consistent and continuous measurements, statistical machine learning methods can be used to fill in these gaps. One such method is the Extreme Learning Machine (ELM), which was described by @HUANG-2006. The ELM is a type of machine learning that can map nonlinear relationships between input data sources. These correlations can then be used to determine missing values in one of the data sources. The ELM method was demonstrated to have a very fast learning time and is flexible to use in many different applications. This particular study has been cited over 7000 times. If the method can be demonstrably more effective and accurate than other methods of data imputation in a groundwater application, it could prove to be a very useful tool.  
+
+This ELM method was demonstrated in a groundwater application in a recent study by @Evans-2019. They demonstrated a method to impute temporal gaps in groundwater data using remotely sensed Earth observation data and the in-situ data as the input datasets. Earth observation data sources included two soil moisture models: the Global Land Data Assimilation System (GLDAS) model and the NOAA Climate Prediction Center (CPC) model. It also included the Palmer Drought Severity Index (PDSI). The ELM was applied well-by-well and observed correlations between the groundwater level measurements from each well and the Earth observation data. This correlation was then used to interpolate data points during temporal ranges that had no data. The method was chosen due to its ability to function without a large amount of in-situ data to “train” the model, which is common among groundwater datasets. To demonstrate its effectiveness, the method was applied to two areas in Utah. The results obtained by the Earth observation method utilizing ELM were significantly more accurate than Kriging (a form a spatial interpolation) in areas of relatively consistent human influences (changes in groundwater pumping, land use changes, etc.). This method provides a more accurate and flexible method to impute groundwater data, which could be very helpful in areas with limited or especially sporadic groundwater data. However, only two areas were analyzed in the paper, demonstrating the need for further testing.   
+
+The Central Valley of California is one of the most productive agricultural areas in the United States. The area produces approximately $17 billion in agronomic value per year and a quarter of the nation’s food (@usgs).  However, due to the dry climate that it sits in, farms in the valley rely heavily on groundwater. In fact, it is the 2nd most-pumped aquifer system in the country, according to the United States Geological Survey (USGS). In fact, groundwater levels in the valley are reaching historically low levels (@THOMAS2017384). Over pumping of aquifers can lead to severe consequences to both people and property through subsidence and can lead to long-term and even permanent changes in hydrologic and aquifer patterns. Due to this extreme amount of groundwater extraction in the area and the resultant threats, regulation now requires more sustainable use of groundwater in the region. Due to the wealth of groundwater data in the area, it is a perfect candidate for testing of groundwater interpolation methods.  
+
+A recent study performed by the Jet Propulsion Laboratory at the California Institute of Technology recently performed a study that compiled all freely available groundwater data in the area from different sources and synthesized it. Data were collected from 5 different sources across two different agencies: the USGS and the California Department of Water Resources (DWR). They eliminated duplicates and invalid data, then used a scoring method to select wells that were evenly distributed and had an appropriately large and consistent set of observations. This study has not yet been published, and so will not be cited in this work. However, this dataset was shared with the author’s research group at BYU and will be used as the base for this study.
+
+
+<!--chapter:end:03-literature.Rmd-->
+
+
+# Data Description
+
+Placeholder
+
+
+
+<!--chapter:end:04-Data_desc.Rmd-->
+
+# Analysis
+
+This chapter will clean the data further and perform interpolation on each well from the chosen set. First, the Extreme Learning Machine method, described in Chapter 3, will be used to impute missing values. A spatial interpolation method, Inverse Distance Weighting (IDW) will then be used for comparison purposes. Finally, the accuracy of each method will be analyzed and compared.
+
+In order to determine accuracy, three years (2012-2015) of data will be imputed by each method. Then, the imputed data will be compared to the observed data.
+
+## Extreme Learning Machine
+
+As described previously, the ELM method forms a relationship between input data sources (in our case, remotely sensed earth observation data) and observed data. This relationship is then used to impute data for time periods without measurements.
+
+First, we will need to create a time series data frame that contains all the measurements from each well.
+```{r message=FALSE}
+load("Data/master.Rda")
+master_wells <- read.csv(file = 'Data/master_wells.csv')
+test_wells <- read.csv(file = 'Data/test_wells.csv')
+```
+
+```{r}
+# Create dataset with all well data in 3 month increments
+test_ts_3mon <- data.frame(c())
+for (well in test_wells$mergeOn){
+  ts <- filter(master, mergeOn == well)
+  w3mon_ts <- ts %>%
+    mutate(date = lubridate::floor_date(date, "3 months"), mergeOn = mergeOn) %>%
+    group_by(date, mergeOn) %>%
+    summarize(Mean_depth=-1*mean(depth.to.GW..ft.))
+  test_ts_3mon <- as.data.frame(rbind(test_ts_3mon, w3mon_ts))
+  #assign(paste(well, "_3mon_ts", sep = ""), mon_ts)
+}
+test_ts_3mon <- merge(test_ts_3mon, test_wells, by = "mergeOn")
+test_ts_3mon$WTE <- test_ts_3mon$Elev + test_ts_3mon$Mean_depth
+test_ts_3mon <- subset(test_ts_3mon, select = -c(X))
+write.csv(test_ts_3mon, file = "Data/test_ts_3mon.csv")
+```
+
+We can also create a facet-wrapped group of time series graphs for each well.
+```{r}
+# Now let's create time series graphs of these quarterly means
+test_ts_3mon %>%
+  ggplot(aes(x = date, y = WTE)) + 
+  geom_line(color = "blue") +
+  xlab("Date") +
+  ylab("Water Table Elevation (ft)") +
+  ggtitle("Quarterly Time Series for Each well") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~mergeOn)
+```
+
+## Inverse Distance Weighting
+
+Previously, we discussed spatial interpolation methods, such as Kriging. Inverse Distance Weighting (IDW) is essentially a simplified version of Kriging. IDW is a spatial interpolation method that uses nearby observations to interpolate an unknown value at a location. IDW places more weight on observed values that are closer to the point in question. It is a fairly simple method of interpolation, and can be implemented in R fairly easily, as will be shown. We will first interpolate the values over a predefined set of years and then compare the IDW solutions with the observed data.
+
+First, we will add the datasets created previously. a year column will be added to the time series data frame created in the last section. As stated above, we will interpolate over 2012-2015.
+
+```{r, message=FALSE, warning=FALSE}
+# Load the datasets created previously
+load("Data/master.Rda")
+master_wells <- read.csv(file = 'Data/master_wells.csv')
+test_wells <- read.csv(file = 'Data/test_wells.csv')
+test_ts_3mon <- read.csv(file = 'Data/test_ts_3mon.csv')
+
+# Set date column as date
+test_ts_3mon[,"date"] <- as.Date(test_ts_3mon[,"date"])
+```
+
+Next, we will loop through each well and each year and perform the IDW interpolation. We will use the idw function to do this. But first, we need to create a list of the dates on which we are going to interpolate.
+```{r, echo=FALSE, results=FALSE}
+# Create the dates list that we want to interpolate
+dates <- c("2012-01-01", "2012-04-01", "2012-07-01", "2012-10-01", 
+           "2013-01-01", "2013-04-01", "2013-07-01", "2013-10-01",
+           "2014-01-01", "2014-04-01", "2014-07-01", "2014-10-01",
+           "2015-01-01", "2015-04-01", "2015-07-01", "2015-10-01")
+
+library(dplyr)
+# Loop through and perform the IDW calculation for each well at each time step
+interp_values <- as.data.frame(c())
+for (well in test_wells$mergeOn){
+  for (dt in dates){
+    sample <- test_ts_3mon %>%
+      filter(mergeOn != well) %>%
+      filter(date == dt) %>%
+      select(-lat, -lon, -Elev) %>%
+      merge(test_wells, by = "mergeOn") %>%
+      select(mergeOn, date, lat, lon, Elev, Mean_depth, WTE)
+    coordinates(sample) = ~lon+lat
+    proj4string(sample) <- CRS("+proj=longlat +datum=WGS84")
+    poi <- data.frame(
+      lon_poi = filter(test_wells, mergeOn == well)$lon, 
+      lat_poi = filter(test_wells, mergeOn == well)$lat)
+    coordinates(poi)  <- ~ lon_poi + lat_poi
+    proj4string(poi) <- CRS("+proj=longlat +datum=WGS84")
+    new <- idw(formula=WTE ~ 1, locations = sample, newdata = poi, idp = 2.0)
+    interp_values <- rbind(interp_values, c(well, dt, new@data$var1.pred))
+  }
+}
+```
+Now we can clean up the dataframe a bit and create 2 new datasets with both interpolated vales and observed values.
+```{r, message=FALSE, warning=FALSE}
+# Rename the columns and set to proper data types
+colnames(interp_values) <- c("mergeOn", "date", "WTE_IDW")
+interp_values$date <- as.Date(interp_values$date)
+interp_values$WTE_IDW <- as.numeric(interp_values$WTE_IDW)
+
+# Create 2 new datasets that combine observed values with IDW values
+comp_data_single_IDW <- merge(interp_values,test_ts_3mon,by=c("mergeOn","date"))
+comp_data_all_IDW <- test_ts_3mon %>%
+  filter(mergeOn == well) %>%
+  left_join(interp_values,by=c("date", "mergeOn"))
+```
+Finally, we will plot the IDW interpolated values. First we will look at a single well, #29N03W18M001M. We will superimpose the IDW values over the entire observed time series for the well. We will do this using the GGPlot2 package again.
+
+```{r, message=FALSE, warning=FALSE}
+# Rename the columns and set to proper data types
+# Plot all observed values vs. the IDW values for Well 29N03W18M001M
+library(ggplot2)
+comp_data_single_IDW %>%
+  ggplot(aes(x = date)) + 
+  geom_line(aes(y = WTE, color = "steelblue")) +
+  geom_line(aes(y = WTE_IDW, color = "orange")) +
+  scale_color_discrete(name = "", labels = c("IDW Data", "Observed Data")) +
+  xlab("Date") +
+  ylab("Water Table Elevation (ft above sea level)") +
+  ggtitle(well) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
+```
+Now we will create a mosaic of time series data showing each well's IDW values superimposed over the observed values for the interpolation period. 
+```{r}
+# Plot 2012-2015 observed values vs. the IDW values
+comp_data_all_IDW %>%
+  ggplot(aes(x = date)) + 
+  geom_line(aes(y = WTE, color = "steelblue")) +
+  geom_line(aes(y = WTE_IDW, color = "orange")) +
+  scale_color_discrete(name = "", labels = c("IDW Data", "Observed Data")) +
+  xlab("Date") +
+  ylab("Water Table Elevation (ft above sea level)") +
+  ggtitle("All Well Time Series: IDW vs. Observed") +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom") +
+  facet_wrap(~mergeOn)
+```
+In the next section, we will explore the accuracy via error norms for these results.
+
+## Error Comparison
+
+The IDW method appears to be fairly accurate, with trends similar to the observed data. However, the magnitude of values are sometimes significantly different. It should again be noted that elevations (which were required to calculate water table elevations) were obtained manually using Google Earth. In addition, the lat/long coordinates for each well were not provided with sufficient resolution to have high confidence in any elevation measurement. Therefore, the water table elevations are subject to error.
+
+A table of error metrics can be calculated using the library **Metrics.** A root mean square error (RMSE) and an r-squared (R^2) error will be calculated for each well. The table will then be formatted for easy viewing.
+```{r}
+# Calculate a set of error metrics for each well's data
+library(Metrics)
+error_metrics_summary <- data.frame()
+for (well in test_wells$mergeOn) {
+  comp_data_well <- comp_data_all_IDW %>%
+    filter(mergeOn == well)
+  rmse_error <-rmse(comp_data_well$WTE, comp_data_well$WTE_IDW)
+  rsq <- cor(comp_data_well$WTE, comp_data_well$WTE_IDW)^2
+  error_metrics_summary <- rbind(error_metrics_summary, c(well, rmse_error, rsq))
+}
+colnames(error_metrics_summary) <- c("Well ID", "RMSE", "R^2")
+error_metrics_summary$RMSE <- as.numeric(error_metrics_summary$RMSE)
+error_metrics_summary$'R^2' <- as.numeric(error_metrics_summary$'R^2')
+error_metrics_summary[,-1] <-round(error_metrics_summary[,-1],3)
+error_metrics_summary
+```
+Wells 25N03W11B003M and 29N03W18M001M appear to have values that are closest to their observed values. However, wells 24N02W24D003M and 25N03W11B003M appear to have the best "fit" to their observed values.
+
+This concludes the chapter on data imputation methods. The final chapter will summarize the paper and discuss future work.
+
+
+
+
+<!--chapter:end:05-analysis.Rmd-->
+
+# Final Words
+
+Here I discuss my conclusions.
+
+<!--chapter:end:06-summary.Rmd-->
+
+`r if (knitr::is_html_output()) '
+# References {-}
+'`
+Some references
+
+<!--chapter:end:07-references.Rmd-->
+
