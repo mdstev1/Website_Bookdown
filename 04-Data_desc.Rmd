@@ -18,7 +18,7 @@ A histogram can show us the time distribution of measurements for the entire dat
 hist(master$date, 'years', xlab = "Date", ylab = "Number of Observations", freq = TRUE, format = "%Y")
 ```
 
-In understanding the spatial locations of these wells, we will need to display each well. However, in order to do this, we need to first extract the wells from the master dataset so that we are not mapping them twice. Once we have that, we can create a map using Leaflet that shows all of the wells in the dataset. A polygon outlining the central valley has also been included in blue. Wells have been "clustered" for a quicker processing time.
+To understand the spatial locations of these wells, we will need to display each well. However, in order to do this, we need to first extract the wells from the master dataset so that we are not mapping them multiple times. Once we have that, we can create a map using Leaflet that shows all of the wells in the dataset. A polygon outlining the central valley has also been included in blue. Wells have been "clustered" for a quicker processing time.
 
 ```{r message=FALSE}
 library(dplyr)
@@ -143,7 +143,7 @@ test_wells <- c('25N03W11B003M',
                 '24N02W24D003M',
                 '24N02W03B001M')
 
-# Now we can create a time series list, histogram mosaic, and well list.
+# Now we can create a time series list and generate a histogram mosaic
 test_ts <- subset(master, mergeOn %in% test_wells)
 ggplot(test_ts, aes(x=date)) +
   geom_histogram(bins = 19*4) +
@@ -173,4 +173,4 @@ test_wells <- subset(test_wells, select = c(mergeOn,lat,lon,Elev))
 write.csv(test_wells, file = "Data/test_wells.csv")
 ```
 
-This concludes the Data exploration chapter. The next chapter will explore different methods of groundwater level imputation.
+This concludes the data exploration chapter. The next chapter will explore different methods of groundwater level imputation.
