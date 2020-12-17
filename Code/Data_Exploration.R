@@ -25,7 +25,7 @@ master_wells <- distinct(master, mergeOn, .keep_all = TRUE)[,1:7]
 master_wells$NDI <- as.character(master_wells$NDI)
 
 # Load in a geojson file that outlines the central valley
-CV_shape <- geojsonio::geojson_read("code/CA_Bulletin_118_Aquifer_Regions_dissolved.geojson", what = "sp")
+CV_shape <- geojsonio::geojson_read("CA_Bulletin_118_Aquifer_Regions_dissolved.geojson", what = "sp")
 
 # Create a leaflet map of the all wells in the dataset with the central valley outline
 leaflet() %>%
@@ -124,6 +124,9 @@ ggplot(test_ts, aes(x=date)) +
   facet_wrap(~mergeOn)
 
 test_wells <- subset(master_wells, mergeOn %in% test_wells)
+test_wells$Elev <- c(55,22,46,19,25)
+test_wells <- subset(test_wells, select = c(X,mergeOn,lat,lon,Elev))
+write.csv(test_wells, file = "test_wells.csv")
 
 # Final leaflet map with study area in red
 leaflet() %>%
