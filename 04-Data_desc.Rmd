@@ -165,10 +165,13 @@ leaflet() %>%
   addRectangles(lng1 = -121.4, lat1 = 38.75, lng2 = -122, lat2 = 39.1, color = "#ff0000", opacity = 0.9, fillColor = "transparent")
 ```
 
-It will be important to be able to retrieve this data later on. We will save the "test_wells" dataframe so that we can retrieve this data again in the next section. Additionally, we will need the elevations for each well in order to calculate water table elevations in the next section. These elevations were estimated manually from Google Earth.
+It will be important to be able to retrieve this data later on. We will save the "test_wells" dataframe so that we can retrieve this data again in the next section. Additionally, we will need the ground surface elevations for each well in order to calculate water table elevations in the next section. These elevations were estimated manually from Google Earth.
 ```{r test_wells}
+# Change test_wells to be a dataframe with well info
 test_wells <- subset(master_wells, mergeOn %in% test_wells)
+# Ground surface elevations obtained using Google Earth
 test_wells$Elev <- c(55,22,46,19,25)
+# Subset the data to necessary columns and save as csv
 test_wells <- subset(test_wells, select = c(mergeOn,lat,lon,Elev))
 write.csv(test_wells, file = "Data/test_wells.csv")
 ```

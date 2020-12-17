@@ -37,7 +37,7 @@ write.csv(test_ts_3mon, file = "Data/test_ts_3mon.csv")
 ```
 
 Now, we will create a facet-wrapped group of time series graphs for each well using the quarterly averages that we just created.
-```{rmessage=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE}
 # Now let's create time series graphs of these quarterly means
 test_ts_3mon %>%
   ggplot(aes(x = date, y = WTE)) + 
@@ -156,7 +156,7 @@ dates <- c("2012-01-01", "2012-04-01", "2012-07-01", "2012-10-01",
            "2015-01-01", "2015-04-01", "2015-07-01", "2015-10-01")
 ```
 Using these dates, we will loop through each well at each date and perform the idw calculation, using the values from the adjacent wells.
-```{r, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
+```{r, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 library(sp)
 library(gstat)
 library(dplyr)
@@ -182,7 +182,6 @@ for (well in test_wells$mergeOn){
   }
 }
 
-head(interp_values)
 ```
 
 Now we can clean up the dataframe a bit and create 2 new datasets that contain both interpolated vales and observed values. One will contain data from the well of interest, well 29N03W18M001M. The other will contain the observed and IDW values for all wells.
@@ -215,7 +214,7 @@ comp_data_single_IDW %>%
   theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 ```
 
-Finally, we will create a mosaic of time series data showing each well's IDW values superimposed over the observed values for the interpolation period. 
+Lastly, we will create a mosaic of time series data showing each well's IDW values superimposed over the observed values for the interpolation period. 
 ```{r, message=FALSE, warning=FALSE}
 # Plot 2012-2015 observed values vs. the IDW values
 comp_data_all_IDW %>%
@@ -229,6 +228,7 @@ comp_data_all_IDW %>%
   theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom") +
   facet_wrap(~mergeOn)
 ```
+
 In the next section, we will explore the accuracy via error norms for these results.
 
 ## Error Comparison
