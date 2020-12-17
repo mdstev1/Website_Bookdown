@@ -8,87 +8,162 @@ In order to determine accuracy, three years (2012-2015) of data will be imputed 
 
 As described previously, the ELM method forms a relationship between input data sources (in our case, remotely sensed earth observation data) and observed data. This relationship is then used to impute data for time periods without measurements.
 
-First, we will need to create a time series data frame that contains all the measurements from each well. We will summarize the data by year to simplify things.
+First, we will need to create a time series data frame that contains all the measurements from each well.
 ```{r message=FALSE}
-load("code/master.Rda")
-master_wells <- read.csv(file = 'code/master_wells.csv')
+load("Data/master.Rda")
+master_wells <- read.csv(file = 'Data/master_wells.csv')
+test_wells <- read.csv(file = 'Data/test_wells.csv')
+```
 
-test_wells <- c('25N03W11B003M', 
-                '29N03W18M001M', 
-                '24N02W29N004M', 
-                '24N02W24D003M',
-                '24N02W03B001M')
-test_wells <- subset(master_wells, mergeOn %in% test_wells)
-
-test_ts_yr <- data.frame(c())
+```{r}
+# Create dataset with all well data in 3 month increments
+test_ts_3mon <- data.frame(c())
 for (well in test_wells$mergeOn){
   ts <- filter(master, mergeOn == well)
-  yr_ts <- ts %>%
-    mutate(date = lubridate::floor_date(date, "1 year"), mergeOn = mergeOn) %>%
+  w3mon_ts <- ts %>%
+    mutate(date = lubridate::floor_date(date, "3 months"), mergeOn = mergeOn) %>%
     group_by(date, mergeOn) %>%
     summarize(Mean_depth=-1*mean(depth.to.GW..ft.))
-  test_ts_yr <- as.data.frame(rbind(test_ts_yr, yr_ts))
+  test_ts_3mon <- as.data.frame(rbind(test_ts_3mon, w3mon_ts))
   #assign(paste(well, "_3mon_ts", sep = ""), mon_ts)
 }
+test_ts_3mon <- merge(test_ts_3mon, test_wells, by = "mergeOn")
+test_ts_3mon$WTE <- test_ts_3mon$Elev + test_ts_3mon$Mean_depth
+test_ts_3mon <- subset(test_ts_3mon, select = -c(X))
+write.csv(test_ts_3mon, file = "Data/test_ts_3mon.csv")
 ```
 
 We can also create a facet-wrapped group of time series graphs for each well.
 ```{r}
-# Now let's create time series graphs of these yearly means
-test_ts_yr %>%
-  ggplot(aes(x = date, y = Mean_depth)) + 
-  geom_line() +
+# Now let's create time series graphs of these quarterly means
+test_ts_3mon %>%
+  ggplot(aes(x = date, y = WTE)) + 
+  geom_line(color = "blue") +
   xlab("Date") +
-  ylab("Depth (ft)") +
-  ggtitle(well) +
+  ylab("Water Table Elevation (ft)") +
+  ggtitle("Quarterly Time Series for Each well") +
   theme(plot.title = element_text(hjust = 0.5)) +
   facet_wrap(~mergeOn)
 ```
 
 ## Inverse Distance Weighting
 
-Inverse Distance Weighting (IDW) is a spatial interpolation method that uses nearby observations to interpolate an unknown value at a location. IDW places more weight on observed values that are closer to the point in question. It is a fairly simple method of interpolation, and can be implemented in R fairly easily, as will be shown. 
+Previously, we discussed spatial interpolation methods, such as Kriging. Inverse Distance Weighting (IDW) is essentially a simplified version of Kriging. IDW is a spatial interpolation method that uses nearby observations to interpolate an unknown value at a location. IDW places more weight on observed values that are closer to the point in question. It is a fairly simple method of interpolation, and can be implemented in R fairly easily, as will be shown. We will first interpolate the values over a predefined set of years and then compare the IDW solutions with the observed data.
 
-First, a year column will be added to the time series data frame created in the last section. As stated above, we will interpolate over 2012-2015.
+First, we will add the datasets created previously. a year column will be added to the time series data frame created in the last section. As stated above, we will interpolate over 2012-2015.
 
 ```{r, message=FALSE, warning=FALSE}
-library(gstat)
-library(sp)
+# Load the datasets created previously
+load("Data/master.Rda")
+master_wells <- read.csv(file = 'Data/master_wells.csv')
+test_wells <- read.csv(file = 'Data/test_wells.csv')
+test_ts_3mon <- read.csv(file = 'Data/test_ts_3mon.csv')
 
-#Create a year column from the date in the test_ts_yr data frame.
-test_ts_yr[,"year"] <- format(test_ts_yr[,"date"], "%Y")
-#Initialize the years for interpolation and a dataframe to store the values
-yrs <- c(2012:2015)
-interp_values <- as.data.frame(c())
+# Set date column as date
+test_ts_3mon[,"date"] <- as.Date(test_ts_3mon[,"date"])
 ```
 
-Next, we will loop through each well and each year and perform the IDW interpolation. We will use the idw function to do this.
-```{r, warning=FALSE}
+Next, we will loop through each well and each year and perform the IDW interpolation. We will use the idw function to do this. But first, we need to create a list of the dates on which we are going to interpolate.
+```{r, echo=FALSE, results=FALSE}
+# Create the dates list that we want to interpolate
+dates <- c("2012-01-01", "2012-04-01", "2012-07-01", "2012-10-01", 
+           "2013-01-01", "2013-04-01", "2013-07-01", "2013-10-01",
+           "2014-01-01", "2014-04-01", "2014-07-01", "2014-10-01",
+           "2015-01-01", "2015-04-01", "2015-07-01", "2015-10-01")
+
+library(dplyr)
+# Loop through and perform the IDW calculation for each well at each time step
+interp_values <- as.data.frame(c())
 for (well in test_wells$mergeOn){
-  for (yr in yrs){
-    lat <- filter(test_wells, mergeOn != well)$lat
-    long <- filter(test_wells, mergeOn != well)$lon
-    depth <- test_ts_yr %>%
+  for (dt in dates){
+    sample <- test_ts_3mon %>%
       filter(mergeOn != well) %>%
-      filter(year == yr) %>%
-      select(Mean_depth) %>%
-      as.list()
-    sample <- data.frame(lat, long, depth)
-    coordinates(sample) = ~long+lat
+      filter(date == dt) %>%
+      select(-lat, -lon, -Elev) %>%
+      merge(test_wells, by = "mergeOn") %>%
+      select(mergeOn, date, lat, lon, Elev, Mean_depth, WTE)
+    coordinates(sample) = ~lon+lat
     proj4string(sample) <- CRS("+proj=longlat +datum=WGS84")
-    loc <- data.frame(
-      long = filter(test_wells, mergeOn == well)$lon, 
-      lat = filter(test_wells, mergeOn == well)$lat)
-    coordinates(loc)  <- ~ long + lat
-    proj4string(loc) <- CRS("+proj=longlat +datum=WGS84")
-    new <- idw(formula=Mean_depth ~ 1, locations = sample, newdata = loc, idp = 2.0)
-    interp_values <- rbind(interp_values, c(well, yr, new@data$var1.pred))
+    poi <- data.frame(
+      lon_poi = filter(test_wells, mergeOn == well)$lon, 
+      lat_poi = filter(test_wells, mergeOn == well)$lat)
+    coordinates(poi)  <- ~ lon_poi + lat_poi
+    proj4string(poi) <- CRS("+proj=longlat +datum=WGS84")
+    new <- idw(formula=WTE ~ 1, locations = sample, newdata = poi, idp = 2.0)
+    interp_values <- rbind(interp_values, c(well, dt, new@data$var1.pred))
   }
 }
-colnames(interp_values) <- c("mergeOn", "year", "value")
 ```
+Now we can clean up the dataframe a bit and create 2 new datasets with both interpolated vales and observed values.
+```{r, message=FALSE, warning=FALSE}
+# Rename the columns and set to proper data types
+colnames(interp_values) <- c("mergeOn", "date", "WTE_IDW")
+interp_values$date <- as.Date(interp_values$date)
+interp_values$WTE_IDW <- as.numeric(interp_values$WTE_IDW)
+
+# Create 2 new datasets that combine observed values with IDW values
+comp_data_single_IDW <- merge(interp_values,test_ts_3mon,by=c("mergeOn","date"))
+comp_data_all_IDW <- test_ts_3mon %>%
+  filter(mergeOn == well) %>%
+  left_join(interp_values,by=c("date", "mergeOn"))
+```
+Finally, we will plot the IDW interpolated values. First we will look at a single well, #29N03W18M001M. We will superimpose the IDW values over the entire observed time series for the well. We will do this using the GGPlot2 package again.
+
+```{r, message=FALSE, warning=FALSE}
+# Rename the columns and set to proper data types
+# Plot all observed values vs. the IDW values for Well 29N03W18M001M
+library(ggplot2)
+comp_data_single_IDW %>%
+  ggplot(aes(x = date)) + 
+  geom_line(aes(y = WTE, color = "steelblue")) +
+  geom_line(aes(y = WTE_IDW, color = "orange")) +
+  scale_color_discrete(name = "", labels = c("IDW Data", "Observed Data")) +
+  xlab("Date") +
+  ylab("Water Table Elevation (ft above sea level)") +
+  ggtitle(well) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
+```
+Now we will create a mosaic of time series data showing each well's IDW values superimposed over the observed values for the interpolation period. 
+```{r}
+# Plot 2012-2015 observed values vs. the IDW values
+comp_data_all_IDW %>%
+  ggplot(aes(x = date)) + 
+  geom_line(aes(y = WTE, color = "steelblue")) +
+  geom_line(aes(y = WTE_IDW, color = "orange")) +
+  scale_color_discrete(name = "", labels = c("IDW Data", "Observed Data")) +
+  xlab("Date") +
+  ylab("Water Table Elevation (ft above sea level)") +
+  ggtitle("All Well Time Series: IDW vs. Observed") +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom") +
+  facet_wrap(~mergeOn)
+```
+In the next section, we will explore the accuracy via error norms for these results.
+
+## Error Comparison
+
+The IDW method appears to be fairly accurate, with trends similar to the observed data. However, the magnitude of values are sometimes significantly different. It should again be noted that elevations (which were required to calculate water table elevations) were obtained manually using Google Earth. In addition, the lat/long coordinates for each well were not provided with sufficient resolution to have high confidence in any elevation measurement. Therefore, the water table elevations are subject to error.
+
+A table of error metrics can be calculated using the library **Metrics.** A root mean square error (RMSE) and an r-squared (R^2) error will be calculated for each well. The table will then be formatted for easy viewing.
+```{r}
+# Calculate a set of error metrics for each well's data
+library(Metrics)
+error_metrics_summary <- data.frame()
+for (well in test_wells$mergeOn) {
+  comp_data_well <- comp_data_all_IDW %>%
+    filter(mergeOn == well)
+  rmse_error <-rmse(comp_data_well$WTE, comp_data_well$WTE_IDW)
+  rsq <- cor(comp_data_well$WTE, comp_data_well$WTE_IDW)^2
+  error_metrics_summary <- rbind(error_metrics_summary, c(well, rmse_error, rsq))
+}
+colnames(error_metrics_summary) <- c("Well ID", "RMSE", "R^2")
+error_metrics_summary$RMSE <- as.numeric(error_metrics_summary$RMSE)
+error_metrics_summary$'R^2' <- as.numeric(error_metrics_summary$'R^2')
+error_metrics_summary[,-1] <-round(error_metrics_summary[,-1],3)
+error_metrics_summary
+```
+Wells 25N03W11B003M and 29N03W18M001M appear to have values that are closest to their observed values. However, wells 24N02W24D003M and 25N03W11B003M appear to have the best "fit" to their observed values.
+
+This concludes the chapter on data imputation methods. The final chapter will summarize the paper and discuss future work.
 
 
-As you can see, I have not finished this project. However, you can probably guess the ending: I compare the errors from both methods and make conclusions about how effective IDW is. Any feedback you have is appreciated.
 
-## Example three
